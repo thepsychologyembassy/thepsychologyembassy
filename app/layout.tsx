@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Psychology Embassy",
   description: "You are on a better path.",
 };
-
+import { Analytics } from "@vercel/analytics/next"
 export default function RootLayout({
   children,
 }: Readonly<{
