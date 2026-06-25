@@ -23,21 +23,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      // 1. Authenticate
-      const { data: { session } } = await supabase.auth.getSession();
+      // 1. Authenticate securely via server
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      if (!session?.user) {
+      if (authError || !user) {
         router.push("/login"); // Kick them out if not logged in
         return;
       }
       
-      setUser(session.user);
+      setUser(user);
 
       // 2. Fetch their specific PAID appointments
       const { data, error } = await supabase
         .from("appointments")
         .select("*")
-        .eq("patient_email", session.user.email)
+        .eq("patient_email", user.email)
         .eq("status", "paid")
         .order("appointment_date", { ascending: true });
 

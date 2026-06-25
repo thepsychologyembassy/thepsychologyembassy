@@ -19,9 +19,9 @@ export default function CounselorPortal() {
 
   useEffect(() => {
     const fetchCounselorData = async () => {
-      // 1. Check Auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.email) {
+      // 1. Check Auth securely via server
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user?.email) {
         router.push("/login");
         return;
       }
@@ -29,7 +29,7 @@ export default function CounselorPortal() {
       // 2. Verify Counselor in Sanity
       const sanityCounselor = await client.fetch(
         `*[_type == "counselor" && email == $email][0]`,
-        { email: session.user.email }
+        { email: user.email }
       );
 
       if (!sanityCounselor) {

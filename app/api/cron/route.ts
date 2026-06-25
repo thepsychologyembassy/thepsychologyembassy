@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../lib/supabase";
+import { createClient } from "@supabase/supabase-js"; // Add this import
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Initialize a secure admin client that bypasses RLS
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export async function GET(request: Request) {
-  // 1. SECURITY LOCK: Verify the Cron Secret
-  // This ensures random bots cannot trigger your application expirations.
+  // 1. SECURITY LOCK
   const authHeader = request.headers.get("Authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response("Unauthorized", { status: 401 });
   }
   
   try {
-    const { data: applications, error } = await supabase
+    // 2. USE THE ADMIN CLIENT HERE
+    const { data: applications, error } = await supabaseAdmin
       .from("program_applications")
       .select("*")
       .eq("status", "accepted");
@@ -34,15 +40,16 @@ export async function GET(request: Request) {
 
       if (hoursPassed >= 24) {
         
-        await supabase
+        // 3. USE THE ADMIN CLIENT HERE TOO
+        await supabaseAdmin
           .from("program_applications")
           .update({ status: "expired" })
           .eq("id", app.id);
         
         // Expiration Email to Applicant
         await resend.emails.send({
-          from: "Project SARTHI <contact.psychologyembassy.com>",
-          to: [app.applicant_email], // Removed hardcoded admin email, sends to actual student
+          from: "Project SARTHI <contact@psychologyembassy.com>",
+          to: [app.applicant_email],
           subject: `Application Expired - ${app.program_title}`,
           html: `
             <div style="font-family: sans-serif; color: #3A3A38; padding: 20px; max-width: 600px; margin: 0 auto;">

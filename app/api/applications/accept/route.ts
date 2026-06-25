@@ -5,7 +5,12 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
+  
   try {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { appId } = await request.json();
 
     if (!appId) return NextResponse.json({ error: "Application ID required" }, { status: 400 });
@@ -23,7 +28,7 @@ export async function POST(request: Request) {
     const paymentLink = `${baseUrl}/pay/${app.id}`;
 
     await resend.emails.send({
-      from: "Project SARTHI <contact.psychologyembassy.com>", 
+      from: "Project SARTHI <contact@psychologyembassy.com>", 
       to: [app.applicant_email], // LIVE TARGET
       subject: `Action Required: You have been accepted to ${app.program_title}!`,
       html: `

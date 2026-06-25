@@ -70,21 +70,23 @@ export default function ProgramPaymentPage() {
         description: `Enrollment: ${application.program_title}`,
         order_id: orderId,
         handler: async function (response: any) {
-          setStatusMessage("Payment Successful! Securing your seat...");
-          
-          // Update Supabase to 'paid' and attach the Razorpay ID
-          await supabase
-            .from("program_applications")
-            .update({ 
-              status: "paid",
-              payment_gateway: "razorpay",
-              payment_order_id: response.razorpay_payment_id
-            })
-            .eq("id", application.id);
-
+          const confirmRes = await fetch("/api/programs/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              appId: application.id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+           });
+          if (!confirmRes.ok) {
+            setStatusMessage("Payment verification failed. Contact support.");
+            return;
+          }
           setApplication({ ...application, status: "paid" });
           setStatusMessage("Seat Secured! Welcome to the program.");
-        },
+       },
         prefill: {
           name: application.applicant_name,
           email: application.applicant_email,

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     // 4. Send Email to Actual Patient
     await resend.emails.send({
-      from: "Project SARTHI <contact.psychologyembassy.com>",
+      from: "Project SARTHI <contact@psychologyembassy.com>",
       to: [appointment.patient_email], // LIVE TARGET
       subject: `Booking Confirmed: Session with ${appointment.counselor_name}`,
       html: `

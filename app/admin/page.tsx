@@ -21,10 +21,10 @@ export default function AdminDashboard() {
   const fetchApplications = async () => {
     setIsLoading(true);
     
-    // 1. Authenticate Supabase User
-    const { data: { session } } = await supabase.auth.getSession();
+    // 1. Authenticate Supabase User securely via server
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (!session?.user?.email) {
+    if (authError || !user?.email) {
       router.push("/");
       return;
     }
@@ -33,7 +33,7 @@ export default function AdminDashboard() {
     const settings = await client.fetch(`*[_type == "siteSettings"][0]`);
     const authorizedEmails: string[] = settings?.adminEmails || [];
 
-    if (!authorizedEmails.includes(session.user.email)) {
+    if (!authorizedEmails.includes(user.email)) {
       alert("Unauthorized Access. Your email is not registered as an Admin.");
       router.push("/"); 
       return;
@@ -59,7 +59,10 @@ export default function AdminDashboard() {
     try {
       const res = await fetch("/api/applications/accept", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`
+        },
         body: JSON.stringify({ appId }),
       });
 
