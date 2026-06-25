@@ -28,7 +28,7 @@ export default function LoginPage() {
       setIsLoading(false);
     } else {
       // If successful, instantly send them to the Dashboard!
-      router.push("/dashboard");
+      router.push("/");
     }
   };
 

@@ -5,10 +5,14 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function GET(request: Request) {
-  // Security Check: You can add a secret token here later to prevent hackers from triggering it
+  // 1. SECURITY LOCK: Verify the Cron Secret
+  // This ensures random bots cannot trigger your application expirations.
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response("Unauthorized", { status: 401 });
+  }
   
   try {
-    // 1. Fetch all currently 'accepted' applications
     const { data: applications, error } = await supabase
       .from("program_applications")
       .select("*")
@@ -21,7 +25,6 @@ export async function GET(request: Request) {
     const now = new Date();
     let expiredCount = 0;
 
-    // 2. Loop through them and check the timers
     for (const app of applications) {
       if (!app.accepted_at) continue;
 
@@ -29,28 +32,24 @@ export async function GET(request: Request) {
       const diffMs = now.getTime() - acceptedDate.getTime();
       const hoursPassed = diffMs / (1000 * 60 * 60);
 
-      // 3. If strictly over 24 hours...
       if (hoursPassed >= 24) {
         
-        // A. Update Supabase to 'expired'
         await supabase
           .from("program_applications")
           .update({ status: "expired" })
           .eq("id", app.id);
         
-        // B. Send Expiration Email to the Admin AND the Applicant
-        // NOTE: While testing, change the 'to' address to YOUR verified Resend email!
+        // Expiration Email to Applicant
         await resend.emails.send({
           from: "Project SARTHI <onboarding@resend.dev>",
-          to: [app.applicant_email, "admin_test@yourdomain.com"], // <-- CHANGE THESE DURING TESTING
-          subject: `Action Required: Application Expired - ${app.program_title}`,
+          to: [app.applicant_email], // Removed hardcoded admin email, sends to actual student
+          subject: `Application Expired - ${app.program_title}`,
           html: `
-            <div style="font-family: sans-serif; color: #3A3A38; padding: 20px;">
+            <div style="font-family: sans-serif; color: #3A3A38; padding: 20px; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #A65D47;">Application Window Expired</h2>
-              <p>Hello,</p>
-              <p>The 24-hour payment window for <strong>${app.applicant_name}</strong> to join <strong>${app.program_title}</strong> has expired.</p>
-              <p>Their seat has been automatically revoked to make room for the next person on the waitlist.</p>
-              <p>If you believe this is an error, please log into the Admin Dashboard immediately.</p>
+              <p>Hello ${app.applicant_name},</p>
+              <p>Your 24-hour window to secure your seat for <strong>${app.program_title}</strong> has expired.</p>
+              <p>Your seat has been passed to the next person on the waitlist. If you believe this is an error, please contact us immediately.</p>
             </div>
           `,
         });

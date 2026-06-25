@@ -32,7 +32,7 @@ export default function SignUpPage() {
       setIsLoading(false);
     } else {
       // If successful, log them in and send them to the Dashboard!
-      router.push("/dashboard");
+      router.push("/");
     }
   };
 

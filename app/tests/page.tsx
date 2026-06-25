@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default async function ToolsPage() {
   // Fetch tools and respect the drag-and-drop order from Sanity
-  const tools = await client.fetch(`*[_type == "tool"] | order(orderRank)`);
+  const tools = await client.fetch(`*[_type == "tool"] | order(orderRank asc, _createdAt desc)`);
 
   return (
     <main className="relative isolate min-h-screen text-[#3A3A38]">
