@@ -17,8 +17,14 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
   }, []);
 
   useEffect(() => {
-    if (menuOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "unset";
+    const footer = document.querySelector('footer');
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+      if (footer) (footer as HTMLElement).style.visibility = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+      if (footer) (footer as HTMLElement).style.visibility = "visible";
+   }
   }, [menuOpen]);
 
   // Supabase Auth Listener
