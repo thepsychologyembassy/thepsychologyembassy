@@ -16,6 +16,7 @@
     "@sanity/orderable-document-list": "^2.0.4",
     "@sanity/vision": "^5.31.1",
     "@supabase/supabase-js": "^2.108.2",
+    "gsap": "^3.15.0",
     "next": "16.2.9",
     "next-sanity": "^13.1.0",
     "nodemailer": "^9.0.1",
