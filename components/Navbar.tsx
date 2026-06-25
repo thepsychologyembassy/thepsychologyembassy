@@ -96,7 +96,7 @@ export default function Navbar() {
             {[
               { name: "Home", path: "/" },
               { name: "Courses & Internships", path: "/programs" },
-              { name: "Tests & Tools", path: "/tools" },
+              { name: "Tests & Tools", path: "/tests" },
               { name: "Blogs", path: "/blogs" },
               { name: "Book Appointment", path: "/book" },
               { name: "About Us", path: "/about" },
