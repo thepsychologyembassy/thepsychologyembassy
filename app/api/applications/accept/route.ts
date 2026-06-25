@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const paymentLink = `${baseUrl}/pay/${app.id}`;
 
     await resend.emails.send({
-      from: "Project SARTHI <onboarding@resend.dev>", 
+      from: "Project SARTHI <contact.psychologyembassy.com>", 
       to: [app.applicant_email], // LIVE TARGET
       subject: `Action Required: You have been accepted to ${app.program_title}!`,
       html: `

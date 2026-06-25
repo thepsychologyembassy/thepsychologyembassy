@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         
         // Expiration Email to Applicant
         await resend.emails.send({
-          from: "Project SARTHI <onboarding@resend.dev>",
+          from: "Project SARTHI <contact.psychologyembassy.com>",
           to: [app.applicant_email], // Removed hardcoded admin email, sends to actual student
           subject: `Application Expired - ${app.program_title}`,
           html: `
