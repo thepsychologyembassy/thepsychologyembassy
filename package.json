@@ -1,0 +1,40 @@
+{
+  "name": "phycology-embassy",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.5.2",
+    "@next/third-parties": "^16.2.9",
+    "@portabletext/react": "^6.2.0",
+    "@sanity/image-url": "^2.1.1",
+    "@sanity/orderable-document-list": "^2.0.4",
+    "@sanity/vision": "^5.31.1",
+    "@supabase/supabase-js": "^2.108.2",
+    "next": "16.2.9",
+    "next-sanity": "^13.1.0",
+    "nodemailer": "^9.0.1",
+    "razorpay": "^2.9.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "resend": "^6.14.0",
+    "sanity": "^5.31.1",
+    "styled-components": "^6.4.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
