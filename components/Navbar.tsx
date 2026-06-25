@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../lib/supabase";
 
-export default function Navbar() {
+export default function Navbar({ lightBackground = false }: { lightBackground?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -47,9 +47,9 @@ export default function Navbar() {
         }`}
       >
         <button onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }} className="relative z-[9999] -ml-4 flex cursor-pointer flex-col gap-[5px] p-4 focus:outline-none">
-          <span className={`h-[2px] w-7 transition-colors duration-300 ${scrolled ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
-          <span className={`h-[2px] w-7 transition-colors duration-300 ${scrolled ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
-          <span className={`h-[2px] w-5 transition-colors duration-300 ${scrolled ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
+          <span className={`h-[2px] w-7 transition-colors duration-300 ${(scrolled || lightBackground) ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
+          <span className={`h-[2px] w-7 transition-colors duration-300 ${(scrolled || lightBackground) ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
+          <span className={`h-[2px] w-5 transition-colors duration-300 ${(scrolled || lightBackground) ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
         </button>
 
         <Link href="/" className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">

@@ -5,9 +5,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 // Next.js requires this for dynamic routes in the App Router
-export default async function CounselorProfile({ params }: { params: { id: string } }) {
-  const { id } = params;
-
+export default async function CounselorProfile({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   // Fetch the specific counselor using their Sanity _id
   const counselor = await client.fetch(
     `*[_type == "counselor" && _id == $id][0]`,

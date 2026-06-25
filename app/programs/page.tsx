@@ -104,7 +104,7 @@ export default function ProgramsPage() {
 
   return (
     <main className="relative isolate min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
-      <Navbar />
+      <Navbar lightBackground />
 
       {/* HERO SECTION */}
       <section className="relative pt-32 pb-16 px-6 text-center sm:pt-40">

@@ -276,7 +276,7 @@ export default function BookPage() {
   return (
     <main className="relative isolate min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
-      
+      <Navbar />
       {/* 1. HERO */}
       <section className="relative h-[50vh] w-full overflow-hidden sm:h-[70vh]">
         <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
@@ -486,7 +486,6 @@ export default function BookPage() {
           </div>
         </section>
       )}
-      <Navbar />
     </main>
   );
 }
