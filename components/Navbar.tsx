@@ -87,7 +87,7 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
       </nav>
 
       {menuOpen && (
-        <div className="pointer-events-auto fixed inset-0 z-[9995] flex flex-col bg-[#1A1C20]/40 px-6 py-8 backdrop-blur-2xl animate-in fade-in duration-300 sm:px-12">
+        <div className="pointer-events-auto fixed inset-0 z-[99999] flex flex-col bg-[#1A1C20]/40 px-6 py-8 backdrop-blur-2xl animate-in fade-in duration-300 sm:px-12">
           <div className="flex justify-end">
             <button onClick={() => setMenuOpen(false)} className="cursor-pointer p-4 text-4xl font-light text-[#FBF8F2] opacity-70 transition-opacity hover:opacity-100">✕</button>
           </div>

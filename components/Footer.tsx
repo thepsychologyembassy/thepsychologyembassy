@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="relative z-50 mt-auto border-t border-[#FBF8F2]/10 bg-[#1A1C20] px-6 py-12 text-[#FBF8F2] backdrop-blur-xl sm:px-12">
+    <footer className="relative z-10 mt-auto border-t border-[#FBF8F2]/10 bg-[#1A1C20] px-6 py-12 text-[#FBF8F2] backdrop-blur-xl sm:px-12">
       {/* Dark opaque glass with a subtle blur, completely transforming the aesthetic */}
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-10 md:flex-row md:items-start">
         
