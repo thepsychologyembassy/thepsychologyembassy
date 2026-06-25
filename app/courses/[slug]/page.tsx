@@ -89,17 +89,20 @@ export default function CourseDetailsPage() {
 
       setStatusMessage("Submitting application...");
 
-      // 3. Save the application data to the database
+      // 3. Save the application data to program_applications (same table as /programs page)
       const payload = {
-        course_name: course.title,
-        full_name: formData.fullName,
-        email: formData.email,
-        linkedin_url: formData.linkedin,
-        resume_link: finalResumeLink, // We save the Supabase File URL here!
-        custom_answers: customAnswers,
+        program_id: course._id,
+        program_title: course.title,
+        program_type: course.type || "course",
+        applicant_name: formData.fullName,
+        applicant_email: formData.email,
+        applicant_phone: "", // courses page doesn't collect phone; left blank
+        statement_of_purpose: Object.entries(customAnswers).map(([q, a]) => `Q: ${q}\nA: ${a}`).join("\n\n"),
+        resume_link: finalResumeLink,
+        status: "pending",
       };
 
-      const { error: dbError } = await supabase.from("applications").insert([payload]);
+      const { error: dbError } = await supabase.from("program_applications").insert([payload]);
 
       if (dbError) throw dbError;
 
