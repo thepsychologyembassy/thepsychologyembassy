@@ -12,8 +12,8 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: Request) {
   // 1. SECURITY LOCK
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const authHeader = request.headers.get("x-vercel-cron");
+  if (authHeader !== process.env.CRON_SECRET) {
     return new Response("Unauthorized", { status: 401 });
   }
   

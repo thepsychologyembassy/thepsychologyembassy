@@ -56,7 +56,7 @@ export default function ProgramPaymentPage() {
       const res = await fetch("/api/razorpay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: programPrice }),
+        body: JSON.stringify({ applicationId: application.id }), 
       });
       const { orderId } = await res.json();
 

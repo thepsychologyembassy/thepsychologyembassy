@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { client } from "../../lib/sanity";
 import Navbar from "../../components/Navbar";
 
 export default function AdminDashboard() {
@@ -18,40 +17,45 @@ export default function AdminDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  const fetchApplications = async () => {
+  // Wrapped in useCallback to fix ESLint Exhaustive Deps warning (Issue #15)
+  const fetchApplications = useCallback(async () => {
     setIsLoading(true);
     
-    // 1. Authenticate Supabase User securely via server
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // 1. Get the current user's session token
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (authError || !user?.email) {
+    if (!session?.access_token) {
       router.push("/");
       return;
     }
 
-    // 2. Cross-Reference with Sanity Site Settings
-    const settings = await client.fetch(`*[_type == "siteSettings"][0]`);
-    const authorizedEmails: string[] = settings?.adminEmails || [];
+    try {
+      // 2. Pass token to our new secure server route
+      const res = await fetch("/api/admin/applications", {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
 
-    if (!authorizedEmails.includes(user.email)) {
-      alert("Unauthorized Access. Your email is not registered as an Admin.");
-      router.push("/"); 
-      return;
+      if (res.status === 401 || res.status === 403) {
+        alert("Unauthorized Access. Your email is not registered as an Admin.");
+        router.push("/"); 
+        return;
+      }
+
+      if (!res.ok) throw new Error("Failed to fetch applications");
+
+      const data = await res.json();
+      setApplications(data.applications || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
+  }, [router]);
 
-    // 3. Fetch all applications
-    const { data, error } = await supabase
-      .from("program_applications")
-      .select("*")
-      .order("created_at", { ascending: true });
-
-    if (data && !error) setApplications(data);
-    setIsLoading(false);
-  };
-
+  // Fixes React anti-pattern (Issue #14)
   useEffect(() => {
     fetchApplications();
-  }, [router]);
+  }, [fetchApplications]);
 
   const handleAccept = async (appId: string) => {
     setIsProcessing(appId);

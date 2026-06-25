@@ -4,15 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function CookieBanner() {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    // Check if the user has already accepted cookies
-    const hasAccepted = localStorage.getItem("cookieConsent");
-    if (!hasAccepted) {
-      setIsVisible(true);
-    }
-  }, []);
+  const [isVisible, setIsVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("cookieConsent");
+  });
 
   const acceptCookies = () => {
     localStorage.setItem("cookieConsent", "true");
