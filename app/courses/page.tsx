@@ -90,12 +90,12 @@ export default function CoursesPage() {
   }, [courses]);
 
   return (
-    <main className="relative text-[#FBF8F2]">
+    <main className="relative bg-[#1A1C20] text-[#FBF8F2]">
       <Navbar />
 
       {/* 1. HERO — Mountain Video Background */}
       <section ref={heroRef} className="relative h-[100vh] w-full overflow-hidden">
-        <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
+        <div className="absolute inset-0 z-0 h-full w-full pointer-events-none">
           <video
             className="h-full w-full object-cover"
             autoPlay

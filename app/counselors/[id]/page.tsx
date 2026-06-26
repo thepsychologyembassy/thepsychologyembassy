@@ -23,6 +23,14 @@ export default async function CounselorProfile({ params }: { params: Promise<{ i
       <Navbar />
 
       <section className="mx-auto max-w-5xl px-6 pb-24 pt-32">
+        {/* Back navigation */}
+        <Link
+          href="/book"
+          className="mb-10 group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
+        >
+          <span className="transition-transform group-hover:-translate-x-1">←</span> Back to Book Appointments
+        </Link>
+
         <div className="flex flex-col gap-12 md:flex-row">
           
           {/* LEFT COLUMN: Image & Quick Stats */}
