@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { client } from "../../lib/sanity";
 import Navbar from "../../components/Navbar";
 import Link from "next/link";

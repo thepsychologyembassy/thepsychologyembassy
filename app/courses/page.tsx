@@ -34,7 +34,7 @@ export default function CoursesPage() {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const data = await client.fetch(`*[_type == "course"]`);
+        const data = await client.fetch(`*[_type in ["course", "internship"]] | order(orderRank)`);
         setCourses(data);
       } catch (error) {
         console.error("Error fetching courses:", error);
