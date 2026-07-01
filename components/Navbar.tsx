@@ -104,6 +104,7 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
               { name: "Courses & Internships", path: "/programs" },
               { name: "Tests & Tools", path: "/tools" },
               { name: "Blogs", path: "/blogs" },
+              { name: "Events & Initiatives", path: "/events" }, 
               { name: "Book Appointment", path: "/book" },
               { name: "About Us", path: "/about" },
             ].map((link, i) => (

@@ -19,26 +19,24 @@ export default function CounselorPortal() {
 
   useEffect(() => {
     const fetchCounselorData = async () => {
-      // 1. Check Auth securely via server
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user?.email) {
+      // 1. Check Auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.email) {
         router.push("/login");
         return;
       }
 
-      const normalizedEmail = user.email.toLowerCase().trim();
+      const userEmail = session.user.email.toLowerCase().trim(); // Forces strict formatting
+
+      // 2. Verify Counselor in Sanity (Bypasses Cache for real-time checks)
       const sanityCounselor = await client.fetch(
-        `*[_type == "counselor" && defined(email) && lower(email) == $email][0]`,
-        { email: normalizedEmail }
+        `*[_type == "counselor" && email == $email][0]`,
+        { email: userEmail },
+        { cache: "no-store" } // Forces Next.js to ignore cached data
       );
 
       if (!sanityCounselor) {
-        console.error("Counselor lookup failed for email:", normalizedEmail);
-        alert(
-          "Access Denied: Your email (" +
-            normalizedEmail +
-            ") is not registered as a Psychologist. Please ensure the email in Sanity matches exactly."
-        );
+        alert(`Access Denied: ${userEmail} is not registered as a Psychologist.`);
         router.push("/dashboard");
         return;
       }
