@@ -26,14 +26,19 @@ export default function CounselorPortal() {
         return;
       }
 
-      // 2. Verify Counselor in Sanity
+      const normalizedEmail = user.email.toLowerCase().trim();
       const sanityCounselor = await client.fetch(
-        `*[_type == "counselor" && email == $email][0]`,
-        { email: user.email }
+        `*[_type == "counselor" && defined(email) && lower(email) == $email][0]`,
+        { email: normalizedEmail }
       );
 
       if (!sanityCounselor) {
-        alert("Access Denied: Your email is not registered as a Psychologist.");
+        console.error("Counselor lookup failed for email:", normalizedEmail);
+        alert(
+          "Access Denied: Your email (" +
+            normalizedEmail +
+            ") is not registered as a Psychologist. Please ensure the email in Sanity matches exactly."
+        );
         router.push("/dashboard");
         return;
       }
