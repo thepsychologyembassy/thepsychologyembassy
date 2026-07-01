@@ -14,8 +14,7 @@ export default function Navbar() {
   const [isCounselor, setIsCounselor] = useState(false);
   
   const pathname = usePathname();
-  // Automatically force dark text/borders on these specific light-background routes
-  const forceSolid = ["/dashboard", "/counselor-portal", "/login", "/signup", "/tools"].includes(pathname);
+  const forceSolid = ["/dashboard", "/counselor-portal", "/login", "/signup", "/tools", "/counselors"].some(path => pathname.startsWith(path));
   const isSolid = scrolled || forceSolid;
 
   useEffect(() => {

@@ -24,7 +24,7 @@ export default async function ToolDetailPage({ params }: { params: { slug: strin
 
   return (
     <main className="min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
-      <Navbar lightBackground={true} />
+      <Navbar />
 
       <section className="mx-auto max-w-4xl px-6 pb-24 pt-32">
         <Link href="/tools" className="mb-8 inline-flex items-center text-xs font-bold uppercase tracking-widest text-[#88B7B5] hover:text-[#4F6F52] transition-colors">
