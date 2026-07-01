@@ -3,14 +3,20 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
-import { client } from "../lib/sanity"; // <-- Added Sanity Client
+import { client } from "../lib/sanity";
 
-export default function Navbar({ lightBackground = false }: { lightBackground?: boolean }) {
+export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [isCounselor, setIsCounselor] = useState(false); // <-- Intelligent Role State
+  const [isCounselor, setIsCounselor] = useState(false);
+  
+  const pathname = usePathname();
+  // Automatically force dark text/borders on these specific light-background routes
+  const forceSolid = ["/dashboard", "/counselor-portal", "/login", "/signup", "/tools"].includes(pathname);
+  const isSolid = scrolled || forceSolid;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -29,11 +35,9 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
    }
   }, [menuOpen]);
 
-  // Supabase Auth & Sanity Role Listener
   useEffect(() => {
     const checkRole = async (sessionUser: any) => {
       if (sessionUser?.email) {
-        // Check if the logged-in email exists in the counselor database
         const sanityCounselor = await client.fetch(
           `*[_type == "counselor" && email == $email][0]`,
           { email: sessionUser.email.toLowerCase().trim() },
@@ -71,9 +75,9 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
         }`}
       >
         <button onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }} className="relative z-[9999] -ml-4 flex cursor-pointer flex-col gap-[5px] p-4 focus:outline-none">
-          <span className={`h-[2px] w-7 transition-colors duration-300 ${(scrolled || lightBackground) ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
-          <span className={`h-[2px] w-7 transition-colors duration-300 ${(scrolled || lightBackground) ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
-          <span className={`h-[2px] w-5 transition-colors duration-300 ${(scrolled || lightBackground) ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
+          <span className={`h-[2px] w-7 transition-colors duration-300 ${isSolid ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
+          <span className={`h-[2px] w-7 transition-colors duration-300 ${isSolid ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
+          <span className={`h-[2px] w-5 transition-colors duration-300 ${isSolid ? 'bg-[#3A3A38]' : 'bg-[#FBF8F2]'}`} />
         </button>
 
         <Link href="/" className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
@@ -83,20 +87,19 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
         <div className="flex items-center gap-4">
           {!user ? (
             <Link href="/login" className={`hidden cursor-pointer font-serif text-lg transition-colors duration-300 sm:inline-block ${
-              scrolled ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
+              isSolid ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
             }`}>
               Log In
             </Link>
           ) : (
             <div className="hidden sm:flex items-center gap-6">
-              {/* MAGIC ROUTING: Changes text and destination based on role */}
               <Link href={isCounselor ? "/counselor-portal" : "/dashboard"} className={`font-serif text-lg transition-colors duration-300 ${
-                scrolled ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
+                isSolid ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
               }`}>
                 {isCounselor ? "Doctor Portal" : "My Dashboard"}
               </Link>
               <button onClick={handleLogout} className={`text-sm font-medium transition-colors ${
-                scrolled ? "text-[#A65D47] hover:text-red-700" : "text-red-300 hover:text-white"
+                isSolid ? "text-[#A65D47] hover:text-red-700" : "text-red-300 hover:text-white"
               }`}>
                 Log Out
               </button>
@@ -104,7 +107,7 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
           )}
 
           <Link href="/book" className={`hidden rounded-full border px-5 py-2 text-xs uppercase tracking-widest transition-colors duration-300 sm:inline-block ${
-              scrolled ? "border-[#4F6F52] text-[#4F6F52] hover:bg-[#4F6F52] hover:text-[#FBF8F2]" : "border-[#FBF8F2] text-[#FBF8F2] hover:bg-[#FBF8F2] hover:text-[#3A3A38]"
+              isSolid ? "border-[#4F6F52] text-[#4F6F52] hover:bg-[#4F6F52] hover:text-[#FBF8F2]" : "border-[#FBF8F2] text-[#FBF8F2] hover:bg-[#FBF8F2] hover:text-[#3A3A38]"
             }`}>
             Book Session
           </Link>
