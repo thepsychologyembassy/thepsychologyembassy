@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../lib/supabase";
+import { client } from "../lib/sanity"; // <-- Added Sanity Client
 
 export default function Navbar({ lightBackground = false }: { lightBackground?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isCounselor, setIsCounselor] = useState(false); // <-- Intelligent Role State
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -27,14 +29,30 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
    }
   }, [menuOpen]);
 
-  // Supabase Auth Listener
+  // Supabase Auth & Sanity Role Listener
   useEffect(() => {
+    const checkRole = async (sessionUser: any) => {
+      if (sessionUser?.email) {
+        // Check if the logged-in email exists in the counselor database
+        const sanityCounselor = await client.fetch(
+          `*[_type == "counselor" && email == $email][0]`,
+          { email: sessionUser.email.toLowerCase().trim() },
+          { cache: "no-store" }
+        );
+        setIsCounselor(!!sanityCounselor);
+      } else {
+        setIsCounselor(false);
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
+      checkRole(session?.user || null);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
+      checkRole(session?.user || null);
     });
 
     return () => authListener.subscription.unsubscribe();
@@ -71,10 +89,11 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
             </Link>
           ) : (
             <div className="hidden sm:flex items-center gap-6">
-              <Link href="/dashboard" className={`font-serif text-lg transition-colors duration-300 ${
+              {/* MAGIC ROUTING: Changes text and destination based on role */}
+              <Link href={isCounselor ? "/counselor-portal" : "/dashboard"} className={`font-serif text-lg transition-colors duration-300 ${
                 scrolled ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
               }`}>
-                My Dashboard
+                {isCounselor ? "Doctor Portal" : "My Dashboard"}
               </Link>
               <button onClick={handleLogout} className={`text-sm font-medium transition-colors ${
                 scrolled ? "text-[#A65D47] hover:text-red-700" : "text-red-300 hover:text-white"
@@ -104,7 +123,7 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
               { name: "Courses & Internships", path: "/programs" },
               { name: "Tests & Tools", path: "/tools" },
               { name: "Blogs", path: "/blogs" },
-              { name: "Events & Initiatives", path: "/events" }, 
+              { name: "Events & Initiatives", path: "/events" },
               { name: "Book Appointment", path: "/book" },
               { name: "About Us", path: "/about" },
             ].map((link, i) => (
@@ -124,7 +143,9 @@ export default function Navbar({ lightBackground = false }: { lightBackground?: 
                 </>
               ) : (
                 <div className="flex items-center gap-4">
-                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="text-[#FBF8F2] hover:text-[#88B7B5]">My Dashboard</Link>
+                  <Link href={isCounselor ? "/counselor-portal" : "/dashboard"} onClick={() => setMenuOpen(false)} className="text-[#FBF8F2] hover:text-[#88B7B5]">
+                    {isCounselor ? "Doctor Portal" : "My Dashboard"}
+                  </Link>
                   <button onClick={handleLogout} className="text-[#A65D47] hover:text-red-400">Log Out</button>
                 </div>
               )}
