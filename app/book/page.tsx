@@ -195,7 +195,7 @@ export default function BookPage() {
       time_slots: selectedSlots,
       modality: modality,
       total_price: totalPrice,
-      payment_gateway: "razorpay", 
+      payment_gateway: "payu", 
       status: "pending"
     };
 
@@ -207,65 +207,55 @@ export default function BookPage() {
       return;
     }
 
-    setStatusMessage("Initializing Secure Checkout...");
+    setStatusMessage("Redirecting to PayU Secure Checkout...");
     
     try {
-      const res = await fetch("/api/razorpay", {
+      // 1. Fetch Secure Hash
+      const res = await fetch("/api/payu/hash", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-        body: JSON.stringify({ appointmentId: dbData.id }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          amount: totalPrice,
+          firstname: patientData.full_name,
+          email: user.email,
+          productinfo: `Session with ${selectedCounselor.name}`
+        }),
       });
-      const { orderId } = await res.json();
+      
+      const { hash, txnid, key } = await res.json();
+      if (!hash) throw new Error("No Hash Generated");
 
-      if (!orderId) throw new Error("No Order ID");
+      // 2. Build Dynamic Form & Submit to PayU
+      const form = document.createElement("form");
+      form.setAttribute("method", "POST");
+      
+      // IMPORTANT: Change to "https://secure.payu.in/_payment" when moving to Production
+      form.setAttribute("action", "https://test.payu.in/_payment"); 
 
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
-        amount: totalPrice * 100,
-        currency: "INR",
-        name: "Project SARTHI",
-        description: `Session with ${selectedCounselor.name}`,
-        order_id: orderId,
-        handler: async function (response: any) {
-          setStatusMessage("Payment Successful! Generating your secure meeting link...");
-          
-          try {
-            const confirmRes = await fetch("/api/appointments/confirm", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ 
-                appointmentId: dbData.id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature
-              }),
-            });
-
-            if (!confirmRes.ok) throw new Error("Failed to confirm");
-
-            setPatientData({ full_name: "", user_email: user.email, message: "" });
-            setSelectedDate("");
-            setSelectedSlots([]);
-            setSelectedCounselorId("");
-            setStatusMessage("Booking Confirmed! Check your email and My Appointments dashboard.");
-          } catch (err) {
-            console.error(err);
-            setStatusMessage("Payment succeeded, but error generating link. We will contact you.");
-          }
-        },
-        prefill: { name: patientData.full_name, email: user.email },
-        theme: { color: "#2C4C5B" },
+      const appendInput = (name: string, value: any) => {
+        const input = document.createElement("input");
+        input.setAttribute("type", "hidden");
+        input.setAttribute("name", name);
+        input.setAttribute("value", value);
+        form.appendChild(input);
       };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on("payment.failed", () => setStatusMessage("Payment Failed. Your session was not booked."));
-      rzp.open();
-      setIsSubmitting(false);
+      appendInput("key", key);
+      appendInput("txnid", txnid);
+      appendInput("amount", totalPrice);
+      appendInput("productinfo", `Session with ${selectedCounselor.name}`);
+      appendInput("firstname", patientData.full_name);
+      appendInput("email", user.email);
+      appendInput("phone", "9999999999"); // PayU requires a phone number fallback
+      appendInput("surl", `${window.location.origin}/api/payu/response?appointment_id=${dbData.id}`);
+      appendInput("furl", `${window.location.origin}/api/payu/response?appointment_id=${dbData.id}`);
+      appendInput("hash", hash);
+
+      document.body.appendChild(form);
+      form.submit();
+      
     } catch (err) {
-      setStatusMessage("Error launching Razorpay.");
+      setStatusMessage("Error launching PayU.");
       setIsSubmitting(false);
     }
   };
@@ -278,7 +268,6 @@ export default function BookPage() {
 
   return (
     <main className="relative isolate min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       <Navbar />
       {/* 1. HERO */}
       <section className="relative h-[50vh] w-full overflow-hidden sm:h-[70vh]">
