@@ -8,7 +8,7 @@ export default function Footer() {
         {/* Left Side: Logo, Contact & Socials */}
         <div className="flex flex-col items-center md:items-start">
           <Link href="/" className="mb-4 flex flex-col items-center md:items-start">
-            <span className="font-serif text-2xl font-medium tracking-wide text-[#FBF8F2]">
+            <span className="font-serif text-2xl font-medium tracking-wide text-[#88B7B5]">
               Psychology
             </span>
             <span className="text-[0.65rem] uppercase tracking-[0.4em] text-[#88B7B5]">
@@ -43,7 +43,7 @@ export default function Footer() {
         {/* Right Side: Medical Disclaimer */}
         <div className="max-w-2xl text-center md:text-right">
           <p className="mb-4 text-xs leading-relaxed text-[#FBF8F2]/80">
-            <strong className="tracking-widest text-[#88B7B5] uppercase">Medical Disclaimer:</strong> All information provided on this website, including blog posts, videos, resources, and social media content, is <em className="font-medium text-white">for educational and informational purposes only</em>. It is <em className="font-medium text-white">not intended to diagnose, treat, cure, or prevent any mental health condition</em>. Online resources do <em className="font-medium text-white">not replace</em> professional therapy, medical advice, or emergency help.
+            <strong className="tracking-widest text-[#88B7B5] uppercase">Disclaimer:</strong> All information provided on this website, including blog posts, videos, resources, and social media content, is <em className="font-medium text-white">for educational and informational purposes only</em>. It is <em className="font-medium text-white">not intended to diagnose, treat, cure, or prevent any mental health condition</em>. Online resources do <em className="font-medium text-white">not replace</em> professional therapy, medical advice, or emergency help.
           </p>
           <p className="text-xs leading-relaxed text-[#FBF8F2]/50">
             If you are experiencing a crisis, please contact a local mental health helpline or emergency services. By engaging with the content or booking services, you acknowledge and accept this disclaimer.
