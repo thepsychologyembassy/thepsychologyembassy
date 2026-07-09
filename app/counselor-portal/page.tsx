@@ -120,7 +120,7 @@ export default function CounselorPortal() {
       <section className="mx-auto max-w-6xl px-6 pb-24 pt-32">
         <div className="mb-12 border-b border-[#3A3A38]/10 pb-8">
           <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#4F6F52]">Psychologist Portal</p>
-          <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">Welcome, {counselor?.name || "Doctor"}</h1>
+          <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">Welcome, {counselor?.name || "Professional"}</h1>
         </div>
 
         {isLoading ? (

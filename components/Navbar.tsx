@@ -95,7 +95,7 @@ export default function Navbar() {
               <Link href={isCounselor ? "/counselor-portal" : "/dashboard"} className={`font-serif text-lg transition-colors duration-300 ${
                 isSolid ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
               }`}>
-                {isCounselor ? "Doctor Portal" : "My Dashboard"}
+                {isCounselor ? "Professional Portal" : "My Dashboard"}
               </Link>
               <button onClick={handleLogout} className={`text-sm font-medium transition-colors ${
                 isSolid ? "text-[#A65D47] hover:text-red-700" : "text-red-300 hover:text-white"
