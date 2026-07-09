@@ -29,9 +29,9 @@ export async function POST(request: Request) {
       await supabase.from("appointments").update({ status: "paid" }).eq("id", appointmentId);
       return NextResponse.redirect(`${url.origin}/dashboard?payment=success`, 303);
     } else {
-      // Payment failed or hash mismatch
-      await supabase.from("appointments").update({ status: "failed" }).eq("id", appointmentId);
-      return NextResponse.redirect(`${url.origin}/book?payment=failed`, 303);
+      // Payment failed, canceled by user, or hash mismatch -> DELETE the ghost appointment
+      await supabase.from("appointments").delete().eq("id", appointmentId);
+      return NextResponse.redirect(`${url.origin}/book?payment=cancelled`, 303);
     }
   } catch (err) {
     console.error("PayU Webhook Error:", err);

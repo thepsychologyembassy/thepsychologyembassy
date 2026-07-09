@@ -35,17 +35,17 @@ export default function DashboardPage() {
 
       // 2. Fetch their specific PAID appointments
       const { data, error } = await supabase
-        .from("appointments")
-        .select("*")
-        .eq("patient_email", user.email)
-        .eq("status", "paid")
-        .order("appointment_date", { ascending: true });
+      .from("appointments")
+      .select("*")
+      .eq("patient_email", user.email)
+      .eq("status", "paid") // STRICTLY ONLY PAID APPOINTMENTS
+      .order("appointment_date", { ascending: true });
 
-      if (!error && data) {
-        setAppointments(data);
-      }
-      setIsLoading(false);
-    };
+    if (!error && data) {
+      setAppointments(data);
+    }
+    setIsLoading(false);
+  };
 
     fetchDashboardData();
   }, [router]);

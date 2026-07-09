@@ -31,6 +31,12 @@ export default {
       description: 'e.g., "5+ Years"'
     },
     { 
+      name: 'sessionsCompleted', 
+      title: 'Sessions Completed', 
+      type: 'string', 
+      description: 'e.g., "500+" or "1,200+"' 
+    },
+    { 
       name: 'education', 
       title: 'Educational Qualifications', 
       type: 'string' 

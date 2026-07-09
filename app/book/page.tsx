@@ -126,7 +126,9 @@ export default function BookPage() {
         .select("time_slots")
         .eq("counselor_id", selectedCounselorId)
         .eq("appointment_date", selectedDate)
+        .eq("status", "paid")
         .in("status", ["paid", "pending"]); // Blocks paid sessions and ones currently in checkout
+
       
       if (data && !error) {
         // Flatten the arrays of booked hours into one single array

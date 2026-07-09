@@ -47,7 +47,7 @@ export default function CounselorPortal() {
         .from("appointments")
         .select("*")
         .eq("counselor_id", sanityCounselor._id)
-        .in("status", ["paid", "pending"])
+        .eq("status", "paid") // STRICTLY ONLY PAID APPOINTMENTS
         .order("appointment_date", { ascending: true });
 
       if (!error && apts) setAppointments(apts);
