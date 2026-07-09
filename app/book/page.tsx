@@ -13,6 +13,7 @@ interface Counselor {
   name: string;
   designation: string;
   experience: string;
+  sessionsCompleted?: string;
   languages: string;
   mode: string;
   fees: number;
@@ -309,6 +310,16 @@ export default function BookPage() {
                       </div>
                       <div className="flex flex-1 flex-col p-6">
                         <h4 className="font-serif text-xl font-medium text-[#2C4C5B]">{c.name}</h4>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {c.experience && (
+                            <span className="flex items-center rounded-md bg-[#88B7B5]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#2C4C5B]">
+                              {c.experience} Yrs Exp
+                            </span>
+                          )}
+                        <span className="flex items-center rounded-md bg-[#F6D86B]/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#8E7A65]">
+                          {c.sessionsCompleted} Sessions
+                        </span>
+                        </div>
                         <p className="mt-2 text-xs leading-relaxed text-[#3A3A38]/70 line-clamp-3">{c.bio}</p>
                         
                         <div className="mt-6 flex items-center justify-between border-t border-[#3A3A38]/10 pt-4">
