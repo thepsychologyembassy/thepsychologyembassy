@@ -230,7 +230,7 @@ export default function BookPage() {
       form.setAttribute("method", "POST");
       
       // IMPORTANT: Change to "https://secure.payu.in/_payment" when moving to Production
-      form.setAttribute("action", "https://test.payu.in/_payment"); 
+      form.setAttribute("action", "https://secure.payu.in/_payment");
 
       const appendInput = (name: string, value: any) => {
         const input = document.createElement("input");
@@ -434,7 +434,7 @@ export default function BookPage() {
                     <p className="font-serif text-3xl font-medium text-[#4F6F52]">₹{totalPrice.toLocaleString()} <span className="text-sm font-normal text-[#3A3A38]/60">({selectedSlots.length} sessions)</span></p>
                   </div>
                   <button type="submit" disabled={isSubmitting || !selectedCounselorId || !selectedDate || selectedSlots.length === 0} className="w-full rounded-full bg-[#2C4C5B] px-8 py-4 text-sm font-medium tracking-wide text-[#FBF8F2] transition-transform hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
-                    {isSubmitting ? "Processing..." : "Confirm & Pay with Razorpay"}
+                    {isSubmitting ? "Processing..." : "Confirm & Pay with PayU"}
                   </button>
                 </div>
                 {statusMessage && <p className={`text-center text-sm font-medium ${statusMessage.includes("Success") || statusMessage.includes("Confirmed") ? "text-[#4F6F52]" : "text-[#A65D47]"}`}>{statusMessage}</p>}
