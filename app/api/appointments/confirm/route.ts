@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     // 2. Generate secure room link
     const secureRoomId = `Sarthi-Session-${appointmentId.split("-")[0]}-${Date.now()}`;
-    const meetingLink = `https://meet.jit.si/${secureRoomId}`;
+    const meetingLink = `https://meet.jit.si/Sarthi-Session-${crypto.randomUUID()}`;
 
     // 3. Update Supabase
     const { data: appointment, error } = await supabase

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js"; // Add this import
+import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import crypto from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -11,9 +12,28 @@ const supabaseAdmin = createClient(
 );
 
 export async function GET(request: Request) {
-  // 1. SECURITY LOCK
-  const authHeader = request.headers.get("x-vercel-cron");
-  if (authHeader !== process.env.CRON_SECRET) {
+  // 1. SECURE VERIFICATION (Timing-Attack Safe)
+  const authHeader = request.headers.get("authorization");
+  
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const token = authHeader.split(" ")[1];
+  const expectedSecret = process.env.CRON_SECRET || "";
+
+  // Length check prevents crypto.timingSafeEqual from crashing
+  if (token.length !== expectedSecret.length) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // Constant-time comparison to prevent timing attacks
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(token),
+    Buffer.from(expectedSecret)
+  );
+
+  if (!isValid) {
     return new Response("Unauthorized", { status: 401 });
   }
   

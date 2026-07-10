@@ -17,11 +17,9 @@ export default function AdminDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Wrapped in useCallback to fix ESLint Exhaustive Deps warning (Issue #15)
   const fetchApplications = useCallback(async () => {
     setIsLoading(true);
     
-    // 1. Get the current user's session token
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.access_token) {
@@ -30,7 +28,6 @@ export default function AdminDashboard() {
     }
 
     try {
-      // 2. Pass token to our new secure server route
       const res = await fetch("/api/admin/applications", {
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
@@ -52,7 +49,6 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
-  // Fixes React anti-pattern (Issue #14)
   useEffect(() => {
     fetchApplications();
   }, [fetchApplications]);
@@ -60,12 +56,20 @@ export default function AdminDashboard() {
   const handleAccept = async (appId: string) => {
     setIsProcessing(appId);
     
+    // 1. Get the current user's secure session token instead of exposing a public secret
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      alert("Session expired. Please log in again.");
+      return;
+    }
+
     try {
       const res = await fetch("/api/applications/accept", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_ADMIN_SECRET}`
+          "Authorization": `Bearer ${session.access_token}` // SECURE: Uses JWT instead of hardcoded secret
         },
         body: JSON.stringify({ appId }),
       });
@@ -73,7 +77,7 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error("Failed to process acceptance");
 
       alert("Applicant Accepted! The 24-hour timer has started and the email has been sent.");
-      fetchApplications(); // Refresh the list
+      fetchApplications(); 
     } catch (error) {
       console.error(error);
       alert("Error accepting application. Please try again.");
@@ -85,9 +89,35 @@ export default function AdminDashboard() {
   const handleRevoke = async (appId: string) => {
     if (!confirm("Are you sure you want to revoke this seat? It will be given to the next person.")) return;
     setIsProcessing(appId);
-    await supabase.from("program_applications").update({ status: "expired" }).eq("id", appId);
-    fetchApplications();
-    setIsProcessing(null);
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      alert("Session expired. Please log in again.");
+      setIsProcessing(null);
+      return;
+    }
+
+    try {
+      // SECURE: Server-side database write instead of client-side RLS bypass
+      const res = await fetch("/api/applications/revoke", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}` 
+        },
+        body: JSON.stringify({ appId }),
+      });
+
+      if (!res.ok) throw new Error("Failed to revoke application");
+
+      fetchApplications();
+    } catch (error) {
+      console.error(error);
+      alert("Error revoking application. Please try again.");
+    } finally {
+      setIsProcessing(null);
+    }
   };
 
   return (

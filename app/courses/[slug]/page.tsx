@@ -69,49 +69,50 @@ export default function CourseDetailsPage() {
     }
 
     try {
-      // 1. Upload the PDF to Supabase Storage
+      // 1. SECURE FILENAME GENERATION
       const fileExt = resumeFile.name.split('.').pop();
-      // Generate a random, unique name so files don't overwrite each other
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Uses browser's native crypto to generate an unguessable UUID
+      const secureFileName = `${self.crypto.randomUUID()}.${fileExt}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('resumes')
-        .upload(fileName, resumeFile);
+        .upload(secureFileName, resumeFile);
 
       if (uploadError) throw uploadError;
 
-      // 2. Get the public URL of the freshly uploaded PDF
+      // Get the URL of the uploaded PDF
       const { data: publicUrlData } = supabase.storage
         .from('resumes')
-        .getPublicUrl(fileName);
+        .getPublicUrl(secureFileName);
         
       const finalResumeLink = publicUrlData.publicUrl;
 
-      setStatusMessage("Submitting application...");
+      setStatusMessage("Submitting application securely...");
 
-      // 3. Save the application data to program_applications (same table as /programs page)
+      // 2. SECURE SERVER-SIDE SUBMISSION (No direct Supabase writes from the client!)
       const payload = {
         program_id: course._id,
         program_title: course.title,
         program_type: course.type || "course",
         applicant_name: formData.fullName,
         applicant_email: formData.email,
-        applicant_phone: "", // courses page doesn't collect phone; left blank
         statement_of_purpose: Object.entries(customAnswers).map(([q, a]) => `Q: ${q}\nA: ${a}`).join("\n\n"),
         resume_link: finalResumeLink,
-        status: "pending",
       };
 
-      const { error: dbError } = await supabase.from("program_applications").insert([payload]);
+      const res = await fetch("/api/applications/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      if (dbError) throw dbError;
+      if (!res.ok) throw new Error("Server rejected application");
 
       setStatusMessage("Success! Your application has been submitted.");
       setFormData({ fullName: "", email: "", linkedin: "" });
       setResumeFile(null);
       setCustomAnswers({});
       
-      // Reset the file input visually
       const fileInput = document.getElementById('resume-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
 

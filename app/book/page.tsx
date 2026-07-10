@@ -213,26 +213,27 @@ export default function BookPage() {
     setStatusMessage("Redirecting to PayU Secure Checkout...");
     
     try {
-      // 1. Fetch Secure Hash
+      // 1. Fetch Secure Hash (Sending IDs instead of Price)
       const res = await fetch("/api/payu/hash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          amount: totalPrice,
           firstname: patientData.full_name,
           email: user.email,
-          productinfo: `Session with ${selectedCounselor.name}`
+          productinfo: `Session with ${selectedCounselor.name}`,
+          counselor_id: selectedCounselorId,
+          slots_count: selectedSlots.length
         }),
       });
       
-      const { hash, txnid, key } = await res.json();
+      // Extract the secure amount calculated by the server
+      const { hash, txnid, key, amount } = await res.json();
       if (!hash) throw new Error("No Hash Generated");
 
       // 2. Build Dynamic Form & Submit to PayU
       const form = document.createElement("form");
       form.setAttribute("method", "POST");
       
-      // IMPORTANT: Change to "https://secure.payu.in/_payment" when moving to Production
       form.setAttribute("action", "https://secure.payu.in/_payment");
 
       const appendInput = (name: string, value: any) => {
@@ -245,7 +246,7 @@ export default function BookPage() {
 
       appendInput("key", key);
       appendInput("txnid", txnid);
-      appendInput("amount", totalPrice);
+      appendInput("amount", amount); // <-- USE SECURE SERVER AMOUNT HERE
       appendInput("productinfo", `Session with ${selectedCounselor.name}`);
       appendInput("firstname", patientData.full_name);
       appendInput("email", user.email);
