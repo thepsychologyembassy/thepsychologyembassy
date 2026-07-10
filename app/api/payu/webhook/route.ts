@@ -29,12 +29,20 @@ export async function POST(req: Request) {
 
     const calculatedHash = crypto.createHash("sha512").update(hashSequence).digest("hex");
 
-    // Authenticate the webhook request
+// Authenticate the webhook request
     if (calculatedHash === hash) {
       if (status === "success") {
-        await supabaseAdmin.from("appointments").update({ status: "paid" }).eq("id", udf1);
+        // Check if this is a Program payment or a Therapy Booking
+        if (txnid.startsWith("TXN_PRG_")) {
+          await supabaseAdmin.from("program_applications").update({ status: "paid" }).eq("id", udf1);
+        } else {
+          await supabaseAdmin.from("appointments").update({ status: "paid" }).eq("id", udf1);
+        }
       } else {
-        await supabaseAdmin.from("appointments").delete().eq("id", udf1);
+        // Only delete failed therapy appointments, leave failed program apps alone so they can retry
+        if (!txnid.startsWith("TXN_PRG_")) {
+          await supabaseAdmin.from("appointments").delete().eq("id", udf1);
+        }
       }
       return NextResponse.json({ success: true });
     } else {
