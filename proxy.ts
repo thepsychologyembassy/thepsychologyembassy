@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Define the routes that strictly require authentication
@@ -24,7 +24,7 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Optimize the middleware to only run on relevant paths to save server resources
+// Optimize the proxy to only run on relevant paths to save server resources
 export const config = {
   matcher: [
     '/dashboard/:path*',
