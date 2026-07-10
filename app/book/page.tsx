@@ -213,7 +213,7 @@ export default function BookPage() {
     setStatusMessage("Redirecting to PayU Secure Checkout...");
     
     try {
-      // 1. Fetch Secure Hash (Sending IDs instead of Price)
+      // 1. Fetch Secure Hash (Now passing dbData.id)
       const res = await fetch("/api/payu/hash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -222,18 +222,17 @@ export default function BookPage() {
           email: user.email,
           productinfo: `Session with ${selectedCounselor.name}`,
           counselor_id: selectedCounselorId,
-          slots_count: selectedSlots.length
+          slots_count: selectedSlots.length,
+          appointment_id: dbData.id // <-- ADDED THIS
         }),
       });
       
-      // Extract the secure amount calculated by the server
       const { hash, txnid, key, amount } = await res.json();
       if (!hash) throw new Error("No Hash Generated");
 
       // 2. Build Dynamic Form & Submit to PayU
       const form = document.createElement("form");
       form.setAttribute("method", "POST");
-      
       form.setAttribute("action", "https://secure.payu.in/_payment");
 
       const appendInput = (name: string, value: any) => {
@@ -246,13 +245,18 @@ export default function BookPage() {
 
       appendInput("key", key);
       appendInput("txnid", txnid);
-      appendInput("amount", amount); // <-- USE SECURE SERVER AMOUNT HERE
+      appendInput("amount", amount);
       appendInput("productinfo", `Session with ${selectedCounselor.name}`);
       appendInput("firstname", patientData.full_name);
       appendInput("email", user.email);
-      appendInput("phone", "9999999999"); // PayU requires a phone number fallback
-      appendInput("surl", `${window.location.origin}/api/payu/response?appointment_id=${dbData.id}`);
-      appendInput("furl", `${window.location.origin}/api/payu/response?appointment_id=${dbData.id}`);
+      appendInput("phone", "9999999999"); 
+      
+      // 3. SECURELY ATTACH ID TO PAYU AS UDF1
+      appendInput("udf1", dbData.id); 
+
+      // 4. CLEANER REDIRECTS (No longer relying on query params)
+      appendInput("surl", `${window.location.origin}/api/payu/response`);
+      appendInput("furl", `${window.location.origin}/api/payu/response`);
       appendInput("hash", hash);
 
       document.body.appendChild(form);
