@@ -27,10 +27,10 @@ export async function POST(request: Request) {
     const { appointmentId } = await request.json();
     if (!appointmentId) return NextResponse.json({ error: "Appointment ID required" }, { status: 400 });
 
-    // 2. FETCH APPOINTMENT DATA (We no longer select total_price)
+    // 2. FETCH APPOINTMENT DATA (Now including appointment_date)
     const { data: appointment, error: fetchError } = await supabaseAdmin
       .from("appointments")
-      .select("patient_email, status, payment_order_id, counselor_id, time_slots")
+      .select("patient_email, status, payment_order_id, counselor_id, time_slots, appointment_date")
       .eq("id", appointmentId)
       .single();
 
@@ -45,6 +45,22 @@ export async function POST(request: Request) {
 
     if (appointment.status === "cancelled") {
       return NextResponse.json({ error: "Appointment is already cancelled" }, { status: 400 });
+    }
+
+    // 2.5 ENFORCE 30-MINUTE CANCELLATION CUTOFF
+    if (appointment.time_slots && appointment.time_slots.length > 0 && appointment.appointment_date) {
+      const startHour = Math.min(...appointment.time_slots);
+      const appointmentStart = new Date(appointment.appointment_date);
+      appointmentStart.setHours(startHour, 0, 0, 0);
+
+      const minutesUntilStart = (appointmentStart.getTime() - Date.now()) / (1000 * 60);
+
+      if (minutesUntilStart < 30) {
+        return NextResponse.json(
+          { error: "Cancellations are not allowed within 30 minutes of your appointment start time." },
+          { status: 400 }
+        );
+      }
     }
 
     // 3. INITIATE PAYU REFUND WITH MATHEMATICALLY VERIFIED PRICING
