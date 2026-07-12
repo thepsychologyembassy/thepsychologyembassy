@@ -65,8 +65,9 @@ export const course = {
       name: 'status',
       title: 'Enrollment Status',
       type: 'string',
+      description: 'Note: To show "Coming Soon" on the website, use the "Is Coming Soon?" toggle above — this field is just for your internal tracking.',
       options: {
-        list: ['Open for Enrollment', 'Waitlist', 'Coming Soon', 'Closed'],
+        list: ['Open for Enrollment', 'Waitlist', 'Closed'],
       },
       initialValue: 'Open for Enrollment',
     },
