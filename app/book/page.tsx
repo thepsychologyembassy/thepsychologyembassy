@@ -11,10 +11,10 @@ import Navbar from "../../components/Navbar";
 interface Counselor {
   _id: string;
   name: string;
+  email: string; 
   designation: string;
   experience: string;
   sessionsCompleted?: string;
-  email: string; 
   languages: string;
   mode: string;
   fees: number;
