@@ -17,27 +17,27 @@ export default function ProgramPaymentPage() {
 
   useEffect(() => {
     const fetchPaymentDetails = async () => {
-      const { data: appData, error: appError } = await supabase
-        .from("program_applications")
-        .select("*")
-        .eq("id", id)
-        .single();
+      try {
+        // Securely fetch via our new API route instead of querying Supabase directly
+        const res = await fetch(`/api/applications/${id}`);
+        if (!res.ok) throw new Error("Application not found");
+        
+        const { application: appData } = await res.json();
+        setApplication(appData);
 
-      if (appError || !appData) {
+        const programData = await client.fetch(
+          `*[_id == $programId][0]{ price }`, 
+          { programId: appData.program_id }
+        );
+        
+        if (programData) {
+          setProgramPrice(programData.price);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
         setIsLoading(false);
-        return;
       }
-      setApplication(appData);
-
-      const programData = await client.fetch(
-        `*[_id == $programId][0]{ price }`, 
-        { programId: appData.program_id }
-      );
-      
-      if (programData) {
-        setProgramPrice(programData.price);
-      }
-      setIsLoading(false);
     };
 
     if (id) fetchPaymentDetails();

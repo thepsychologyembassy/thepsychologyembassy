@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Your existing Sanity images config
   images: {
     remotePatterns: [
       {
@@ -10,21 +9,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  
-  // The new security headers
   async headers() {
     return [
       {
-        // Apply these headers to all routes
         source: '/(.*)',
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'DENY', // Prevents clickjacking
+            value: 'DENY', 
           },
           {
             key: 'X-Content-Type-Options',
-            value: 'nosniff', // Prevents MIME-sniffing
+            value: 'nosniff',
           },
           {
             key: 'Referrer-Policy',
@@ -32,7 +28,12 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains', // Enforces HTTPS
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          // NEW: The Content Security Policy
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.sanity.io; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.sanity.io https://*.payu.in;"
           }
         ],
       },

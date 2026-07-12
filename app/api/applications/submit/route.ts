@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { client } from "../../../../lib/sanity";
 
-// Use the Service Role key to securely write to the database
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -21,7 +21,45 @@ export async function POST(request: Request) {
       resume_link 
     } = body;
 
-    // Build the payload on the server where the client cannot tamper with it
+    // 1. STRICT DATA TYPE & LENGTH VALIDATION
+    if (!program_id || !applicant_name || !applicant_email || !statement_of_purpose) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    if (applicant_name.length > 100) return NextResponse.json({ error: "Name too long" }, { status: 400 });
+    if (statement_of_purpose.length > 5000) return NextResponse.json({ error: "Statement of purpose exceeds maximum length" }, { status: 400 });
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(applicant_email)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+
+    // 2. ANTI-SPAM / RATE LIMITING (Max 1 application per email per 24 hours)
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+
+    const { count, error: countError } = await supabaseAdmin
+      .from("program_applications")
+      .select("*", { count: 'exact', head: true })
+      .eq("applicant_email", applicant_email)
+      .gte("created_at", yesterday.toISOString());
+
+    if (countError) throw countError;
+    if (count && count >= 1) {
+      return NextResponse.json({ error: "You have already submitted an application recently. Please wait 24 hours." }, { status: 429 });
+    }
+
+    // 3. SANITY INTEGRITY CHECK: Does this program actually exist?
+    const validProgram = await client.fetch(
+      `*[_id == $id][0]{ _id }`, 
+      { id: program_id }
+    );
+
+    if (!validProgram) {
+      return NextResponse.json({ error: "Invalid program ID" }, { status: 400 });
+    }
+
+    // 4. SECURE PAYLOAD CONSTRUCTION
     const securePayload = {
       program_id,
       program_title,
@@ -30,7 +68,7 @@ export async function POST(request: Request) {
       applicant_email,
       statement_of_purpose,
       resume_link,
-      status: "pending", // HARDCODED ON SERVER: Attackers can no longer force "accepted" or "paid"
+      status: "pending", 
     };
 
     const { error } = await supabaseAdmin
