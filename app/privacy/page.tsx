@@ -39,7 +39,7 @@ export default function PrivacyPage() {
             <h2 className="mb-4 font-serif text-2xl font-medium text-[#2C4C5B]">1. What Information We Collect</h2>
             <p className="mb-3"><strong className="text-[#3A3A38]">Account Information:</strong> When you sign up, we collect your name, email address, and password (stored securely via Supabase — we never see your raw password).</p>
             <p className="mb-3"><strong className="text-[#3A3A38]">Booking Information:</strong> When you book a counseling session, we collect your name, email, the counselor you selected, your chosen date and time, and any notes you voluntarily provide about the reason for your session.</p>
-            <p className="mb-3"><strong className="text-[#3A3A38]">Payment Information:</strong> Payments are processed by Razorpay. We do not store your card number, CVV, or any payment credentials. We only store the Razorpay Order ID and Payment ID to confirm your booking. Razorpay's privacy policy applies to payment data.</p>
+            <p className="mb-3"><strong className="text-[#3A3A38]">Payment Information:</strong> Payments are processed by PayU. We do not store your card number, CVV, or any payment credentials. We only store the PayU Order ID and Payment ID to confirm your booking. PayU's privacy policy applies to payment data.</p>
             <p className="mb-3"><strong className="text-[#3A3A38]">Application Information:</strong> If you apply for a course or internship, we collect your name, email, phone number, LinkedIn profile URL, and statement of purpose. Resume files are stored securely and accessible only to our team.</p>
             <p className="mb-3"><strong className="text-[#3A3A38]">Usage Data:</strong> We collect anonymised analytics data (pages visited, time on site) via Google Analytics 4 to improve our website. This data cannot identify you personally.</p>
             <p><strong className="text-[#3A3A38]">Cookies:</strong> We use strictly necessary cookies for authentication and optional analytics cookies. See our <Link href="/cookies" className="text-[#4F6F52] underline underline-offset-2">Cookies Policy</Link> for details.</p>
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
               {[
                 "Supabase (Ireland / USA) — database and authentication",
                 "Sanity (USA) — content management",
-                "Razorpay (India) — payment processing",
+                "PayU (India) — payment processing",
                 "Resend (USA) — transactional email delivery",
                 "Google Analytics (USA) — anonymised website analytics",
                 "Clerk (USA) — user authentication (where applicable)",

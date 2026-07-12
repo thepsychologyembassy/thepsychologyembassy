@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { client } from "../../../../lib/sanity";
 
 // Secure server-side client
 const supabaseAdmin = createClient(
@@ -26,10 +27,10 @@ export async function POST(request: Request) {
     const { appointmentId } = await request.json();
     if (!appointmentId) return NextResponse.json({ error: "Appointment ID required" }, { status: 400 });
 
-    // 2. FETCH APPOINTMENT TO VERIFY OWNERSHIP
+    // 2. FETCH APPOINTMENT DATA (We no longer select total_price)
     const { data: appointment, error: fetchError } = await supabaseAdmin
       .from("appointments")
-      .select("patient_email, status, payment_order_id, total_price")
+      .select("patient_email, status, payment_order_id, counselor_id, time_slots")
       .eq("id", appointmentId)
       .single();
 
@@ -46,13 +47,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Appointment is already cancelled" }, { status: 400 });
     }
 
-    // 3. INITIATE PAYU REFUND (If it was a paid appointment)
+    // 3. INITIATE PAYU REFUND WITH MATHEMATICALLY VERIFIED PRICING
     if (appointment.status === "paid" && appointment.payment_order_id) {
+      
+      // Fetch the true price securely from Sanity
+      const counselor = await client.fetch(
+        `*[_type == "counselor" && _id == $id][0]{ fees }`,
+        { id: appointment.counselor_id },
+        { cache: 'no-store' }
+      );
+
+      if (!counselor || !counselor.fees || !appointment.time_slots) {
+        return NextResponse.json({ error: "Could not securely verify refund amount" }, { status: 500 });
+      }
+
+      // Calculate the true, server-verified amount
+      const secureRefundAmount = counselor.fees * appointment.time_slots.length;
+
       const key = process.env.NEXT_PUBLIC_PAYU_MERCHANT_KEY!;
       const salt = process.env.PAYU_MERCHANT_SALT!;
       const command = "cancel_refund_transaction";
       const txnid = appointment.payment_order_id; 
-      const amount = appointment.total_price;
 
       // PayU Refund Hash Formula: key|command|var1|salt
       const hashString = `${key}|${command}|${txnid}|${salt}`;
@@ -62,7 +77,7 @@ export async function POST(request: Request) {
       payuFormData.append("key", key);
       payuFormData.append("command", command);
       payuFormData.append("var1", txnid); // The original transaction ID
-      payuFormData.append("var2", amount.toString()); // Refund Amount
+      payuFormData.append("var2", secureRefundAmount.toString()); // SECURE Refund Amount
       payuFormData.append("var3", appointmentId); // Optional: Refund ID/Reference
       payuFormData.append("hash", hash);
 

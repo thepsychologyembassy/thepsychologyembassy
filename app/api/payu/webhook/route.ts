@@ -30,27 +30,33 @@ export async function POST(req: Request) {
     const calculatedHash = crypto.createHash("sha512").update(hashSequence).digest("hex");
 
 // Authenticate the webhook request
+    // Authenticate the webhook request
     if (calculatedHash === hash) {
-      if (status === "success") {
-        if (txnid.startsWith("TXN_PRG_")) {
-          await supabaseAdmin.from("program_applications").update({ status: "paid" }).eq("id", udf1);
-        } else {
-          await supabaseAdmin.from("appointments").update({ status: "paid" }).eq("id", udf1);
-        }
-      } else {
-        if (!txnid.startsWith("TXN_PRG_")) {
-          const { data: currentApp } = await supabaseAdmin
-            .from("appointments")
-            .select("status")
-            .eq("id", udf1)
-            .single();
+      const isProgram = txnid.startsWith("TXN_PRG_");
+      const targetTable = isProgram ? "program_applications" : "appointments";
 
-          // Only delete if it hasn't already been successfully paid
-          if (currentApp && currentApp.status !== "paid") {
-            await supabaseAdmin.from("appointments").delete().eq("id", udf1);
-          }
+      // 1. IDEMPOTENCY GUARD: Check the current database state first
+      const { data: existingRecord } = await supabaseAdmin
+        .from(targetTable)
+        .select("status")
+        .eq("id", udf1)
+        .single();
+
+      // If it's already marked as paid, ignore the duplicate webhook and return 200 OK
+      if (existingRecord && existingRecord.status === "paid") {
+        return NextResponse.json({ success: true, message: "Already processed" });
+      }
+
+      // 2. Process the state change
+      if (status === "success") {
+        await supabaseAdmin.from(targetTable).update({ status: "paid" }).eq("id", udf1);
+      } else {
+        // Only delete failed therapy appointments, leave failed program apps alone so they can retry
+        if (!isProgram) {
+          await supabaseAdmin.from("appointments").delete().eq("id", udf1);
         }
       }
+      
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: "Invalid Hash Signature" }, { status: 400 });

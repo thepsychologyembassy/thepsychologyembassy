@@ -64,7 +64,7 @@ export default function TermsPage() {
             <h2 className="mb-4 font-serif text-2xl font-medium text-[#2C4C5B]">2. Booking & Payments</h2>
             <p className="mb-3"><strong className="text-[#3A3A38]">Booking:</strong> Sessions are confirmed only after successful payment. A pending slot may be held briefly during checkout but is not guaranteed until payment is complete.</p>
             <p className="mb-3"><strong className="text-[#3A3A38]">Pricing:</strong> All prices are listed in Indian Rupees (₹) and are inclusive of applicable taxes. Prices are subject to change with notice.</p>
-            <p className="mb-3"><strong className="text-[#3A3A38]">Payment Processing:</strong> Payments are processed securely by Razorpay. By completing a payment, you also agree to Razorpay's Terms of Service.</p>
+            <p className="mb-3"><strong className="text-[#3A3A38]">Payment Processing:</strong> Payments are processed securely by PayU. By completing a payment, you also agree to PayU's Terms of Service.</p>
             <p><strong className="text-[#3A3A38]">Failed Payments:</strong> If your payment fails, your session booking will not be confirmed. Please attempt the booking again or contact us for assistance.</p>
           </div>
 
