@@ -15,6 +15,10 @@ export default function DashboardPage() {
   // Time calculations to activate link exactly 15 mins before
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // NEW: Custom Modal States
+  const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
   useEffect(() => {
     // Update the clock every minute so the 15-minute button activation is live
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -55,9 +59,10 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  // NEW: Secure Cancellation & Refund Flow
-  const handleCancel = async (appointmentId: string) => {
-    if (!window.confirm("Are you sure you want to cancel this session? Your refund will be processed automatically.")) return;
+  // SECURE CANCELLATION EXECUTED FROM MODAL
+  const confirmCancellation = async () => {
+    if (!appointmentToCancel) return;
+    setIsCancelling(true);
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -68,7 +73,7 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session?.access_token}`
         },
-        body: JSON.stringify({ appointmentId })
+        body: JSON.stringify({ appointmentId: appointmentToCancel })
       });
 
       const result = await res.json();
@@ -76,13 +81,16 @@ export default function DashboardPage() {
       if (res.ok) {
         alert("Session cancelled successfully. Your refund is on the way!");
         // Instantly remove the cancelled appointment from the UI without reloading
-        setAppointments((prev) => prev.filter((apt) => apt.id !== appointmentId));
+        setAppointments((prev) => prev.filter((apt) => apt.id !== appointmentToCancel));
       } else {
         alert(result.error || "Failed to cancel session.");
       }
     } catch (err) {
       console.error(err);
       alert("A network error occurred. Please try again.");
+    } finally {
+      setIsCancelling(false);
+      setAppointmentToCancel(null); // Close the modal
     }
   };
 
@@ -183,7 +191,7 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Actions Column (Google Meet, Directions, and Cancel) */}
+                  {/* Actions Column */}
                   {!isPast && (
                     <div className="flex flex-col items-start gap-3 border-t border-[#3A3A38]/10 pt-6 sm:items-end sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
                       {apt.modality === 'online' ? (
@@ -205,9 +213,9 @@ export default function DashboardPage() {
                         </div>
                       )}
                       
-                      {/* Cancel Button */}
+                      {/* NEW: Triggers the Custom Modal Instead of window.confirm */}
                       <button 
-                        onClick={() => handleCancel(apt.id)}
+                        onClick={() => setAppointmentToCancel(apt.id)}
                         className="mt-1 text-xs font-semibold text-red-500/80 underline-offset-4 hover:text-red-600 hover:underline transition-all"
                       >
                         Cancel & Refund
@@ -221,6 +229,34 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* NEW: Custom Cancellation Modal */}
+      {appointmentToCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#3A3A38]/40 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#FBF8F2] p-8 shadow-2xl">
+            <h3 className="mb-2 font-serif text-2xl font-medium text-[#2C4C5B]">Cancel Session?</h3>
+            <p className="mb-6 text-sm leading-relaxed text-[#3A3A38]/70">
+              Are you sure you want to cancel this session? Your refund will be processed automatically to your original payment method.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setAppointmentToCancel(null)}
+                disabled={isCancelling}
+                className="flex-1 rounded-full border border-[#3A3A38]/20 bg-white py-3 text-sm font-semibold tracking-wide text-[#3A3A38] transition-colors hover:bg-gray-50 disabled:opacity-50"
+              >
+                Keep Session
+              </button>
+              <button
+                onClick={confirmCancellation}
+                disabled={isCancelling}
+                className="flex-1 rounded-full bg-[#A65D47] py-3 text-sm font-semibold tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-lg disabled:opacity-50"
+              >
+                {isCancelling ? "Cancelling..." : "Yes, Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

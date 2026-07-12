@@ -36,7 +36,7 @@ export default async function EventsPage() {
 
         <div className="flex flex-col gap-24">
           {initiatives.map((init: any, idx: number) => (
-            <div key={init._id} className="group relative flex flex-col gap-10 lg:flex-row lg:items-center">
+            <div key={init._id} className="group relative flex flex-col gap-10 lg:flex-row lg:items-start">
               
               {/* IMAGE SIDE */}
               {init.logo && (
