@@ -28,7 +28,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch("/api/admin/applications", {
+      const res = await fetch("/admin/applications", {
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
 

@@ -28,11 +28,21 @@ export async function POST(req: Request) {
 
     // Verify hash to safely redirect the user
     if (calcHash === hash && status === "success") {
-      // Idempotent update: Just in case the webhook is delayed by a few seconds
       await supabaseAdmin.from("appointments").update({ status: "paid" }).eq("id", udf1);
       return NextResponse.redirect(`${url.origin}/dashboard?payment=success`, 303);
     } else {
-      await supabaseAdmin.from("appointments").delete().eq("id", udf1);
+      // CRITICAL FIX: Check if the webhook already marked it as paid before deleting
+      const { data: existingApp } = await supabaseAdmin
+        .from("appointments")
+        .select("status")
+        .eq("id", udf1)
+        .single();
+
+      // Only delete if the webhook hasn't already secured the payment
+      if (existingApp && existingApp.status !== "paid") {
+        await supabaseAdmin.from("appointments").delete().eq("id", udf1);
+      }
+      
       return NextResponse.redirect(`${url.origin}/book?payment=cancelled`, 303);
     }
   } catch (error) {
