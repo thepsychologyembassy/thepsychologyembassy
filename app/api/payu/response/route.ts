@@ -28,9 +28,13 @@ export async function POST(req: Request) {
 
     // Verify hash to safely redirect the user
     if (calcHash === hash && status === "success") {
-      await supabaseAdmin.from("appointments").update({ status: "paid" }).eq("id", udf1);
+      await supabaseAdmin.from("appointments").update({ 
+        status: "paid",
+        payment_order_id: txnid   // ADD THIS
+      }).eq("id", udf1);
       return NextResponse.redirect(`${url.origin}/dashboard?payment=success`, 303);
-    } else {
+    } 
+    else {
       // CRITICAL FIX: Check if the webhook already marked it as paid before deleting
       const { data: existingApp } = await supabaseAdmin
         .from("appointments")

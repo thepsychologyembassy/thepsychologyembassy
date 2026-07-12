@@ -49,8 +49,12 @@ export async function POST(req: Request) {
 
       // 2. Process the state change
       if (status === "success") {
-        await supabaseAdmin.from(targetTable).update({ status: "paid" }).eq("id", udf1);
-      } else {
+        await supabaseAdmin.from(targetTable).update({ 
+          status: "paid",
+          payment_order_id: txnid   // ADD THIS
+        }).eq("id", udf1);
+      }
+      else {
         // Only delete failed therapy appointments, leave failed program apps alone so they can retry
         if (!isProgram) {
           await supabaseAdmin.from("appointments").delete().eq("id", udf1);
