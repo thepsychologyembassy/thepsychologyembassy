@@ -35,17 +35,17 @@ export default function DashboardPage() {
 
       // 2. Fetch their specific PAID appointments
       const { data, error } = await supabase
-      .from("appointments")
-      .select("*")
-      .eq("patient_email", user.email)
-      .eq("status", "paid") // STRICTLY ONLY PAID APPOINTMENTS
-      .order("appointment_date", { ascending: true });
+        .from("appointments")
+        .select("*")
+        .eq("patient_email", user.email)
+        .eq("status", "paid") // STRICTLY ONLY PAID APPOINTMENTS
+        .order("appointment_date", { ascending: true });
 
-    if (!error && data) {
-      setAppointments(data);
-    }
-    setIsLoading(false);
-  };
+      if (!error && data) {
+        setAppointments(data);
+      }
+      setIsLoading(false);
+    };
 
     fetchDashboardData();
   }, [router]);
@@ -53,6 +53,37 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
+  };
+
+  // NEW: Secure Cancellation & Refund Flow
+  const handleCancel = async (appointmentId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this session? Your refund will be processed automatically.")) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const res = await fetch("/api/appointments/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ appointmentId })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        alert("Session cancelled successfully. Your refund is on the way!");
+        // Instantly remove the cancelled appointment from the UI without reloading
+        setAppointments((prev) => prev.filter((apt) => apt.id !== appointmentId));
+      } else {
+        alert(result.error || "Failed to cancel session.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("A network error occurred. Please try again.");
+    }
   };
 
   // Helper to format 24hr array into human string
@@ -140,7 +171,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
 
-                    {/* NEW: Post-Session Homework Block */}
+                    {/* Post-Session Homework Block */}
                     {apt.homework && (
                       <div className="mt-6 rounded-2xl bg-[#88B7B5]/10 p-5 border border-[#88B7B5]/20 max-w-xl">
                         <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#2C4C5B] flex items-center gap-2">
@@ -152,9 +183,9 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Actions Column (Google Meet or Directions) */}
+                  {/* Actions Column (Google Meet, Directions, and Cancel) */}
                   {!isPast && (
-                    <div className="flex flex-col items-start gap-2 border-t border-[#3A3A38]/10 pt-6 sm:items-end sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+                    <div className="flex flex-col items-start gap-3 border-t border-[#3A3A38]/10 pt-6 sm:items-end sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
                       {apt.modality === 'online' ? (
                         <>
                           <button 
@@ -170,9 +201,17 @@ export default function DashboardPage() {
                       ) : (
                         <div className="rounded-xl bg-[#FBF8F2] p-4 text-left sm:text-right text-sm border border-[#3A3A38]/10">
                           <p className="font-semibold text-[#2C4C5B]">In-Person Session</p>
-                          <p className="mt-1 text-xs text-[#3A3A38]/70">Please arrive at the clinic 15 minutes prior to your appointment time.</p>
+                          <p className="mt-1 text-xs text-[#3A3A38]/70">Please arrive at the clinic 15 minutes prior.</p>
                         </div>
                       )}
+                      
+                      {/* Cancel Button */}
+                      <button 
+                        onClick={() => handleCancel(apt.id)}
+                        className="mt-1 text-xs font-semibold text-red-500/80 underline-offset-4 hover:text-red-600 hover:underline transition-all"
+                      >
+                        Cancel & Refund
+                      </button>
                     </div>
                   )}
 

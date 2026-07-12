@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { client } from "../../../../lib/sanity"; // Make sure this path matches your project structure
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Use the Service Role key to securely bypass RLS for admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: Request) {
   try {
-    // 1. SECURE JWT VERIFICATION (Replaces the exposed ADMIN_SECRET)
+    // 1. SECURE JWT VERIFICATION
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,14 +21,23 @@ export async function POST(request: Request) {
     const token = authHeader.split(" ")[1];
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
-    if (authError || !user) {
+    if (authError || !user || !user.email) {
       return NextResponse.json({ error: "Invalid session or token" }, { status: 401 });
+    }
+
+    // 2. CRITICAL FIX: VERIFY ADMIN ROLE VIA SANITY
+    const settings = await client.fetch(`*[_type == "siteSettings"][0]{ adminEmails }`);
+    const adminEmails = settings?.adminEmails || [];
+    
+    if (!adminEmails.includes(user.email)) {
+      console.warn(`SECURITY ALERT: Non-admin ${user.email} attempted to accept an application.`);
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
     const { appId } = await request.json();
     if (!appId) return NextResponse.json({ error: "Application ID required" }, { status: 400 });
 
-    // 2. SECURE DATABASE WRITE
+    // 3. SECURE DATABASE WRITE
     const { data: app, error } = await supabaseAdmin
       .from("program_applications")
       .update({ status: "accepted", accepted_at: new Date().toISOString() })
@@ -37,7 +46,15 @@ export async function POST(request: Request) {
 
     if (error || !app) return NextResponse.json({ error: "Failed to update" }, { status: 500 });
 
-    // 3. SEND EMAIL NOTIFICATION
+    // 4. AUDIT LOGGING
+    await supabaseAdmin.from("admin_logs").insert([{
+      admin_email: user.email,
+      action: "accepted_application",
+      target_id: appId,
+      details: `Accepted applicant ${app.applicant_email} into ${app.program_title}`
+    }]);
+
+    // 5. SEND EMAIL NOTIFICATION
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || request.headers.get("origin") || "https://psychologyembassy.com";
     const paymentLink = `${baseUrl}/pay/${app.id}`;
 

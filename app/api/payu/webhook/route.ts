@@ -32,16 +32,23 @@ export async function POST(req: Request) {
 // Authenticate the webhook request
     if (calculatedHash === hash) {
       if (status === "success") {
-        // Check if this is a Program payment or a Therapy Booking
         if (txnid.startsWith("TXN_PRG_")) {
           await supabaseAdmin.from("program_applications").update({ status: "paid" }).eq("id", udf1);
         } else {
           await supabaseAdmin.from("appointments").update({ status: "paid" }).eq("id", udf1);
         }
       } else {
-        // Only delete failed therapy appointments, leave failed program apps alone so they can retry
         if (!txnid.startsWith("TXN_PRG_")) {
-          await supabaseAdmin.from("appointments").delete().eq("id", udf1);
+          const { data: currentApp } = await supabaseAdmin
+            .from("appointments")
+            .select("status")
+            .eq("id", udf1)
+            .single();
+
+          // Only delete if it hasn't already been successfully paid
+          if (currentApp && currentApp.status !== "paid") {
+            await supabaseAdmin.from("appointments").delete().eq("id", udf1);
+          }
         }
       }
       return NextResponse.json({ success: true });

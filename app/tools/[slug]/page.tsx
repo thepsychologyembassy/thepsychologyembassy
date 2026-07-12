@@ -5,7 +5,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 export const revalidate = 60;
-
+export async function generateStaticParams() {
+  const tools = await client.fetch(`*[_type == "tool"]{ "slug": slug.current }`);
+  return tools.map((tool: any) => ({
+    slug: tool.slug,
+  }));
+}
 export default async function ToolDetailPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
 
