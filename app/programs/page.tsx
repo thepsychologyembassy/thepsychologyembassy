@@ -82,17 +82,21 @@ export default function ProgramsPage() {
       program_type: selectedProgram._type,
       applicant_name: formData.name,
       applicant_email: formData.email,
-      applicant_phone: formData.phone,
-      statement_of_purpose: formData.sop,
-      status: "pending",
+      // Note: We are passing phone inside SOP if the API doesn't explicitly extract it, 
+      // or you can update the /api/applications/submit route to accept phone.
+      statement_of_purpose: `Phone: ${formData.phone}\n\n${formData.sop}`,
     };
 
-    const { error } = await supabase.from("program_applications").insert([payload]);
+    try {
+      // SECURE: Routing through the server-side endpoint instead of the client DB
+      const res = await fetch("/api/applications/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (error) {
-      setStatusMessage("Something went wrong. Please try again.");
-      setIsSubmitting(false);
-    } else {
+      if (!res.ok) throw new Error("Failed to submit application");
+
       setStatusMessage(
         "Success! Your application is under review. We will email you shortly."
       );
@@ -101,6 +105,10 @@ export default function ProgramsPage() {
         setSelectedProgram(null);
         setStatusMessage("");
       }, 4000);
+    } catch (error) {
+      console.error(error);
+      setStatusMessage("Something went wrong. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
