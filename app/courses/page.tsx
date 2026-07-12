@@ -25,7 +25,7 @@ interface Course {
 
 export default function CoursesPage() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const cardsRef = useRef<(HTMLAnchorElement | null)[]>([]);
+  const cardsRef = useRef<(HTMLDivElement | HTMLAnchorElement | null)[]>([]);
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,93 +135,116 @@ export default function CoursesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((opp, i) => (
-              <Link
-                href={
-                  opp.isComingSoon 
-                    ? "#" 
-                    : opp.provider === "External" && opp.externalLink
-                      ? opp.externalLink
-                      : `/courses/${opp.slug?.current || ""}`
-                }
-                onClick={(e) => opp.isComingSoon && e.preventDefault()}
-                target={!opp.isComingSoon && opp.provider === "External" ? "_blank" : "_self"}
-                rel={!opp.isComingSoon && opp.provider === "External" ? "noopener noreferrer" : ""}
-                key={opp._id}
-                ref={(el) => {
-                  cardsRef.current[i] = el as any;
-                }}
-                className={`group flex flex-col rounded-2xl border border-[#CFE3E8]/10 bg-[#1A1C20]/60 backdrop-blur-md overflow-hidden ${
-                  opp.isComingSoon 
-                    ? "opacity-60 cursor-default" 
-                    : "transition-all hover:bg-[#1A1C20]/80 hover:border-[#CFE3E8]/30"
-                }`}
-              >
-                <div className="relative h-44 w-full overflow-hidden">
-                  {opp.image ? (
-                    <Image
-                      src={urlFor(opp.image).width(600).height(352).fit("crop").url()}
-                      alt={opp.title}
-                      fill
-                      className={`object-cover ${opp.isComingSoon ? "grayscale" : "transition-transform duration-500 group-hover:scale-105"}`}
-                    />
-                  ) : (
-                    <div className="h-2 w-full bg-gradient-to-r from-[#CFE3E8]/20 via-[#4F6F52]/30 to-[#CFE3E8]/20" />
-                  )}
-                  <div className="absolute inset-0 bg-[#1A1C20]/20" />
-                  
-                  {/* COMING SOON BADGE */}
-                  {opp.isComingSoon && (
-                    <div className="absolute top-4 right-4 z-20 rounded-full bg-[#1A1C20]/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#F6D86B] border border-[#F6D86B]/30 shadow-lg">
-                      Coming Soon
-                    </div>
-                  )}
-                </div>
+            {courses.map((opp, i) => {
+              const isComingSoon = opp.isComingSoon;
+              const href = opp.provider === "External" && opp.externalLink
+                ? opp.externalLink
+                : `/courses/${opp.slug?.current || ""}`;
+              const target = opp.provider === "External" ? "_blank" : "_self";
+              const rel = opp.provider === "External" ? "noopener noreferrer" : "";
+              
+              const className = `group flex flex-col rounded-2xl border border-[#CFE3E8]/10 bg-[#1A1C20]/60 backdrop-blur-md overflow-hidden ${
+                isComingSoon 
+                  ? "opacity-60 cursor-default" 
+                  : "transition-all hover:bg-[#1A1C20]/80 hover:border-[#CFE3E8]/30"
+              }`;
 
-                <div className="flex flex-1 flex-col p-8">
-                  {/* HIDE TAGS IF COMING SOON */}
-                  {!opp.isComingSoon && (
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      <span className="inline-block rounded-full bg-[#CFE3E8]/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-[#CFE3E8] border border-[#CFE3E8]/20">
-                        {opp.type || "Program"}
-                      </span>
-                      <span
-                        className={`inline-block rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wider border ${
-                          opp.provider === "External"
-                            ? "bg-transparent text-[#CFE3E8]/60 border-[#CFE3E8]/30 border-dashed"
-                            : "bg-[#4F6F52]/30 text-[#A3C4C3] border-[#4F6F52]/40"
-                        }`}
-                      >
-                        {opp.provider || "Internal"}
-                      </span>
-                    </div>
-                  )}
-
-                  <h3 className={`font-serif text-2xl font-medium ${opp.isComingSoon ? "text-[#FBF8F2]/70 mt-4 mb-0" : "text-[#FBF8F2] mb-3"}`}>
-                    {opp.title}
-                  </h3>
-                  
-                  {/* HIDE DESCRIPTION IF COMING SOON */}
-                  {!opp.isComingSoon && (
-                    <p className="mb-6 flex-grow text-sm leading-relaxed text-[#FBF8F2]/70">
-                      {opp.description}
-                    </p>
-                  )}
-
-                  <div className={`mt-auto flex items-center justify-between border-t border-[#CFE3E8]/10 pt-4 ${opp.isComingSoon ? "mt-8" : ""}`}>
-                    <span className="text-xs font-medium text-[#CFE3E8]/60 uppercase tracking-widest">
-                      {opp.isComingSoon ? "Status" : (opp.duration || "Self-Paced")}
-                    </span>
-                    <span className={`text-sm font-medium flex items-center gap-2 ${opp.isComingSoon ? "text-[#CFE3E8]/40" : "text-[#CFE3E8] transition-colors group-hover:text-white"}`}>
-                      {opp.isComingSoon ? "In Development" : "Apply Now"}
-                      {!opp.isComingSoon && (
-                        <span className="transform transition-transform group-hover:translate-x-1">→</span>
-                      )}
-                    </span>
+              // The inside of the card (Shared between the Link and the Div)
+              const InnerCard = () => (
+                <>
+                  <div className="relative h-44 w-full overflow-hidden">
+                    {opp.image ? (
+                      <Image
+                        src={urlFor(opp.image).width(600).height(352).fit("crop").url()}
+                        alt={opp.title}
+                        fill
+                        className={`object-cover ${isComingSoon ? "grayscale" : "transition-transform duration-500 group-hover:scale-105"}`}
+                      />
+                    ) : (
+                      <div className="h-2 w-full bg-gradient-to-r from-[#CFE3E8]/20 via-[#4F6F52]/30 to-[#CFE3E8]/20" />
+                    )}
+                    <div className="absolute inset-0 bg-[#1A1C20]/20" />
+                    
+                    {/* COMING SOON BADGE */}
+                    {isComingSoon && (
+                      <div className="absolute top-4 right-4 z-20 rounded-full bg-[#1A1C20]/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#F6D86B] border border-[#F6D86B]/30 shadow-lg">
+                        Coming Soon
+                      </div>
+                    )}
                   </div>
-                </div>
-              </Link>
-            ))}
+
+                  <div className="flex flex-1 flex-col p-8">
+                    {/* HIDE TAGS IF COMING SOON */}
+                    {!isComingSoon && (
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        <span className="inline-block rounded-full bg-[#CFE3E8]/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-[#CFE3E8] border border-[#CFE3E8]/20">
+                          {opp.type || "Program"}
+                        </span>
+                        <span
+                          className={`inline-block rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wider border ${
+                            opp.provider === "External"
+                              ? "bg-transparent text-[#CFE3E8]/60 border-[#CFE3E8]/30 border-dashed"
+                              : "bg-[#4F6F52]/30 text-[#A3C4C3] border-[#4F6F52]/40"
+                          }`}
+                        >
+                          {opp.provider || "Internal"}
+                        </span>
+                      </div>
+                    )}
+
+                    <h3 className={`font-serif text-2xl font-medium ${isComingSoon ? "text-[#FBF8F2]/70 mt-4 mb-0" : "text-[#FBF8F2] mb-3"}`}>
+                      {opp.title}
+                    </h3>
+                    
+                    {/* HIDE DESCRIPTION IF COMING SOON */}
+                    {!isComingSoon && (
+                      <p className="mb-6 flex-grow text-sm leading-relaxed text-[#FBF8F2]/70">
+                        {opp.description}
+                      </p>
+                    )}
+
+                    <div className={`mt-auto flex items-center justify-between border-t border-[#CFE3E8]/10 pt-4 ${isComingSoon ? "mt-8" : ""}`}>
+                      <span className="text-xs font-medium text-[#CFE3E8]/60 uppercase tracking-widest">
+                        {isComingSoon ? "Status" : (opp.duration || "Self-Paced")}
+                      </span>
+                      <span className={`text-sm font-medium flex items-center gap-2 ${isComingSoon ? "text-[#CFE3E8]/40" : "text-[#CFE3E8] transition-colors group-hover:text-white"}`}>
+                        {isComingSoon ? "In Development" : "Apply Now"}
+                        {!isComingSoon && (
+                          <span className="transform transition-transform group-hover:translate-x-1">→</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              );
+
+              // 🔴 BULLETPROOF FIX: If it's coming soon, it renders as a pure <div>. No link tag exists!
+              if (isComingSoon) {
+                return (
+                  <div
+                    key={opp._id}
+                    ref={(el) => { cardsRef.current[i] = el; }}
+                    className={className}
+                  >
+                    <InnerCard />
+                  </div>
+                );
+              }
+
+              // 🟢 Normal state: Renders as an active <Link>
+              return (
+                <Link
+                  key={opp._id}
+                  href={href}
+                  target={target}
+                  rel={rel}
+                  ref={(el) => { cardsRef.current[i] = el; }}
+                  className={className}
+                >
+                  <InnerCard />
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
