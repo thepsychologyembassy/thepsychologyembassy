@@ -24,6 +24,13 @@ export const blog = {
       validation: (Rule: any) => Rule.required(),
     },
     {
+      name: 'isComingSoon',
+      title: 'Is Coming Soon?',
+      type: 'boolean',
+      description: 'Turn this on to show a Coming Soon badge and disable the link on the website.',
+      initialValue: false,
+    },
+    {
       name: 'publishedAt',
       title: 'Published at',
       type: 'datetime',

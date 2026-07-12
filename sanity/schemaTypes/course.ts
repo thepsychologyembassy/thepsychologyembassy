@@ -32,6 +32,13 @@ export const course = {
       options: { source: 'title' },
     },
     {
+      name: 'isComingSoon',
+      title: 'Is Coming Soon?',
+      type: 'boolean',
+      description: 'Turn this on to show a Coming Soon badge and disable the link on the website.',
+      initialValue: false,
+    },
+    {
       name: 'price',
       title: 'Enrollment Fee (in ₹)',
       type: 'number',

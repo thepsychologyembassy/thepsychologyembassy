@@ -19,7 +19,8 @@ interface Course {
   duration: string;
   provider: string;
   externalLink?: string;
-  image?: any; // Sanity image asset
+  image?: any; 
+  isComingSoon?: boolean; // NEW FIELD
 }
 
 export default function CoursesPage() {
@@ -45,7 +46,6 @@ export default function CoursesPage() {
     fetchCourses();
   }, []);
 
-  // Animate hero text on scroll
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ctx = gsap.context(() => {
@@ -64,7 +64,6 @@ export default function CoursesPage() {
     return () => ctx.revert();
   }, []);
 
-  // Staggered card reveal after data loads
   useEffect(() => {
     if (courses.length === 0) return;
     const ctx = gsap.context(() => {
@@ -91,10 +90,6 @@ export default function CoursesPage() {
     <main className="relative bg-[#1A1C20] text-[#FBF8F2]">
       <Navbar />
 
-      {/* HERO — Mountain Video Background */}
-      {/* FIX: video is placed directly in the section (no extra wrapper div).
-          DOM order handles layering: video → overlay → text.
-          No explicit z-index on video avoids any stacking-context fight with body bg. */}
       <section
         ref={heroRef}
         className="relative h-[100vh] w-full overflow-hidden bg-[#1A1C20]"
@@ -109,10 +104,8 @@ export default function CoursesPage() {
           <source src="/videos/mountain-climb.mp4" type="video/mp4" />
         </video>
 
-        {/* Icy dark overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#1A1C20]/40 via-[#1A1C20]/20 to-[#1A1C20]" />
 
-        {/* Hero text sits on top via z-10 */}
         <div className="hero-text relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
           <p className="mb-4 text-sm uppercase tracking-[0.35em] text-[#CFE3E8] drop-shadow-sm">
             Ascend Your Career
@@ -123,7 +116,6 @@ export default function CoursesPage() {
         </div>
       </section>
 
-      {/* CONTENT GRID */}
       <section className="relative z-10 mx-auto min-h-screen w-full max-w-6xl px-6 pt-20 pb-40">
         <div className="mb-16 text-center">
           <h2 className="font-serif text-3xl font-medium text-[#FBF8F2] sm:text-4xl">
@@ -146,67 +138,85 @@ export default function CoursesPage() {
             {courses.map((opp, i) => (
               <Link
                 href={
-                  opp.provider === "External" && opp.externalLink
-                    ? opp.externalLink
-                    : `/courses/${opp.slug?.current || ""}`
+                  opp.isComingSoon 
+                    ? "#" 
+                    : opp.provider === "External" && opp.externalLink
+                      ? opp.externalLink
+                      : `/courses/${opp.slug?.current || ""}`
                 }
-                target={opp.provider === "External" ? "_blank" : "_self"}
-                rel={opp.provider === "External" ? "noopener noreferrer" : ""}
+                onClick={(e) => opp.isComingSoon && e.preventDefault()}
+                target={!opp.isComingSoon && opp.provider === "External" ? "_blank" : "_self"}
+                rel={!opp.isComingSoon && opp.provider === "External" ? "noopener noreferrer" : ""}
                 key={opp._id}
                 ref={(el) => {
                   cardsRef.current[i] = el as any;
                 }}
-                className="group flex flex-col rounded-2xl border border-[#CFE3E8]/10 bg-[#1A1C20]/60 backdrop-blur-md transition-all hover:bg-[#1A1C20]/80 hover:border-[#CFE3E8]/30 overflow-hidden"
+                className={`group flex flex-col rounded-2xl border border-[#CFE3E8]/10 bg-[#1A1C20]/60 backdrop-blur-md overflow-hidden ${
+                  opp.isComingSoon 
+                    ? "opacity-60 cursor-default" 
+                    : "transition-all hover:bg-[#1A1C20]/80 hover:border-[#CFE3E8]/30"
+                }`}
               >
-                {/* FIX: Sanity thumbnail image — now rendered if present */}
-                {opp.image ? (
-                  <div className="relative h-44 w-full overflow-hidden">
+                <div className="relative h-44 w-full overflow-hidden">
+                  {opp.image ? (
                     <Image
                       src={urlFor(opp.image).width(600).height(352).fit("crop").url()}
                       alt={opp.title}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      className={`object-cover ${opp.isComingSoon ? "grayscale" : "transition-transform duration-500 group-hover:scale-105"}`}
                     />
-                    {/* subtle darkening so text badges stay readable */}
-                    <div className="absolute inset-0 bg-[#1A1C20]/20" />
-                  </div>
-                ) : (
-                  // Placeholder stripe when no image uploaded yet
-                  <div className="h-2 w-full bg-gradient-to-r from-[#CFE3E8]/20 via-[#4F6F52]/30 to-[#CFE3E8]/20" />
-                )}
+                  ) : (
+                    <div className="h-2 w-full bg-gradient-to-r from-[#CFE3E8]/20 via-[#4F6F52]/30 to-[#CFE3E8]/20" />
+                  )}
+                  <div className="absolute inset-0 bg-[#1A1C20]/20" />
+                  
+                  {/* COMING SOON BADGE */}
+                  {opp.isComingSoon && (
+                    <div className="absolute top-4 right-4 z-20 rounded-full bg-[#1A1C20]/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#F6D86B] border border-[#F6D86B]/30 shadow-lg">
+                      Coming Soon
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex flex-1 flex-col p-8">
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    <span className="inline-block rounded-full bg-[#CFE3E8]/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-[#CFE3E8] border border-[#CFE3E8]/20">
-                      {opp.type || "Program"}
-                    </span>
-                    <span
-                      className={`inline-block rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wider border ${
-                        opp.provider === "External"
-                          ? "bg-transparent text-[#CFE3E8]/60 border-[#CFE3E8]/30 border-dashed"
-                          : "bg-[#4F6F52]/30 text-[#A3C4C3] border-[#4F6F52]/40"
-                      }`}
-                    >
-                      {opp.provider || "Internal"}
-                    </span>
-                  </div>
+                  {/* HIDE TAGS IF COMING SOON */}
+                  {!opp.isComingSoon && (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      <span className="inline-block rounded-full bg-[#CFE3E8]/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-[#CFE3E8] border border-[#CFE3E8]/20">
+                        {opp.type || "Program"}
+                      </span>
+                      <span
+                        className={`inline-block rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wider border ${
+                          opp.provider === "External"
+                            ? "bg-transparent text-[#CFE3E8]/60 border-[#CFE3E8]/30 border-dashed"
+                            : "bg-[#4F6F52]/30 text-[#A3C4C3] border-[#4F6F52]/40"
+                        }`}
+                      >
+                        {opp.provider || "Internal"}
+                      </span>
+                    </div>
+                  )}
 
-                  <h3 className="mb-3 font-serif text-2xl font-medium text-[#FBF8F2]">
+                  <h3 className={`font-serif text-2xl font-medium ${opp.isComingSoon ? "text-[#FBF8F2]/70 mt-4 mb-0" : "text-[#FBF8F2] mb-3"}`}>
                     {opp.title}
                   </h3>
-                  <p className="mb-6 flex-grow text-sm leading-relaxed text-[#FBF8F2]/70">
-                    {opp.description}
-                  </p>
+                  
+                  {/* HIDE DESCRIPTION IF COMING SOON */}
+                  {!opp.isComingSoon && (
+                    <p className="mb-6 flex-grow text-sm leading-relaxed text-[#FBF8F2]/70">
+                      {opp.description}
+                    </p>
+                  )}
 
-                  <div className="mt-auto flex items-center justify-between border-t border-[#CFE3E8]/10 pt-4">
+                  <div className={`mt-auto flex items-center justify-between border-t border-[#CFE3E8]/10 pt-4 ${opp.isComingSoon ? "mt-8" : ""}`}>
                     <span className="text-xs font-medium text-[#CFE3E8]/60 uppercase tracking-widest">
-                      {opp.duration || "Self-Paced"}
+                      {opp.isComingSoon ? "Status" : (opp.duration || "Self-Paced")}
                     </span>
-                    <span className="text-sm font-medium text-[#CFE3E8] transition-colors group-hover:text-white flex items-center gap-2">
-                      Apply Now
-                      <span className="transform transition-transform group-hover:translate-x-1">
-                        →
-                      </span>
+                    <span className={`text-sm font-medium flex items-center gap-2 ${opp.isComingSoon ? "text-[#CFE3E8]/40" : "text-[#CFE3E8] transition-colors group-hover:text-white"}`}>
+                      {opp.isComingSoon ? "In Development" : "Apply Now"}
+                      {!opp.isComingSoon && (
+                        <span className="transform transition-transform group-hover:translate-x-1">→</span>
+                      )}
                     </span>
                   </div>
                 </div>

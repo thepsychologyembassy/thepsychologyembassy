@@ -16,6 +16,13 @@ export default {
       validation: (Rule: any) => Rule.required(),
       description: 'Click generate to create a unique URL for this tool.'
     },
+    {
+      name: 'isComingSoon',
+      title: 'Is Coming Soon?',
+      type: 'boolean',
+      description: 'Turn this on to show a Coming Soon badge and disable the link on the website.',
+      initialValue: false,
+    },
     { 
       name: 'shortDescription', 
       title: 'Short Description (For the Card)', 

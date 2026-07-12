@@ -9,8 +9,6 @@ export default async function ToolsPage() {
 
   return (
     <main className="relative isolate min-h-screen text-[#3A3A38]">
-      
-      {/* CINEMATIC VIDEO BACKGROUND */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none bg-[#FBF8F2]">
         <video className="h-full w-full object-cover opacity-80" autoPlay muted loop playsInline>
           <source src="/videos/aurora.mp4" type="video/mp4" />
@@ -42,25 +40,46 @@ export default async function ToolsPage() {
             {tools.map((tool: any) => (
               <div 
                 key={tool._id} 
-                className="flex flex-col overflow-hidden rounded-3xl border border-[#3A3A38]/10 bg-white/70 backdrop-blur-md shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+                className={`flex flex-col overflow-hidden rounded-3xl border border-[#3A3A38]/10 bg-white/70 backdrop-blur-md shadow-sm ${
+                  tool.isComingSoon 
+                    ? "opacity-60" 
+                    : "transition-all hover:-translate-y-1 hover:shadow-lg"
+                }`}
               >
-                <div className="p-8 flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#88B7B5]">{tool.category || 'Resource'}</span>
-                    {tool.time && <span className="text-[10px] font-semibold text-[#3A3A38]/50">{tool.time}</span>}
-                  </div>
-                  <h3 className="font-serif text-2xl text-[#2C4C5B] mb-3">{tool.title}</h3>
+                <div className="p-8 flex flex-col h-full relative">
                   
-                  {/* Now uses the dedicated short description */}
-                  <p className="text-sm text-[#3A3A38]/80 line-clamp-3 leading-relaxed flex-1">
-                    {tool.shortDescription || "Click below to read more about this tool."}
-                  </p>
+                  {/* COMING SOON BADGE */}
+                  {tool.isComingSoon && (
+                    <span className="absolute top-8 right-8 rounded-full bg-[#3A3A38]/5 border border-[#3A3A38]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[#3A3A38]/60">
+                      Coming Soon
+                    </span>
+                  )}
+
+                  {/* HIDE CATEGORY & TIME IF COMING SOON */}
+                  {!tool.isComingSoon && (
+                    <div className="flex justify-between items-start mb-4 pr-16">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#88B7B5]">{tool.category || 'Resource'}</span>
+                      {tool.time && <span className="text-[10px] font-semibold text-[#3A3A38]/50">{tool.time}</span>}
+                    </div>
+                  )}
+
+                  <h3 className={`font-serif text-2xl ${tool.isComingSoon ? "text-[#2C4C5B]/70 mb-0 mt-8" : "text-[#2C4C5B] mb-3"}`}>{tool.title}</h3>
                   
-                  {/* Routes to the dynamic slug page */}
-                  {tool.slug?.current && (
+                  {/* HIDE DESCRIPTION IF COMING SOON */}
+                  {!tool.isComingSoon && (
+                    <p className="text-sm text-[#3A3A38]/80 line-clamp-3 leading-relaxed flex-1">
+                      {tool.shortDescription || "Click below to read more about this tool."}
+                    </p>
+                  )}
+                  
+                  {tool.isComingSoon ? (
+                    <div className="mt-8 inline-block text-center rounded-full bg-[#3A3A38]/5 border border-[#3A3A38]/10 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-[#3A3A38]/40 cursor-not-allowed">
+                      In Development
+                    </div>
+                  ) : tool.slug?.current && (
                     <Link 
                       href={`/tools/${tool.slug.current}`}
-                      className="mt-8 inline-block text-center rounded-full bg-[#4F6F52] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white transition-transform hover:-translate-y-1 hover:shadow-md"
+                      className="mt-auto inline-block text-center rounded-full bg-[#4F6F52] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white transition-transform hover:-translate-y-1 hover:shadow-md"
                     >
                       Read More
                     </Link>
