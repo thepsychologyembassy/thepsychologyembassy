@@ -6,9 +6,15 @@ import { notFound } from "next/navigation";
 
 export const revalidate = 60;
 export async function generateStaticParams() {
-  const tools = await client.fetch(`*[_type == "tool"]{ "slug": slug.current }`);
+  // 1. Only fetch tools where the slug actually exists (defined)
+  // 2. Alias it to 'slugString' to guarantee we don't accidentally fetch the raw Sanity object
+  const tools = await client.fetch(
+    `*[_type == "tool" && defined(slug.current)]{ "slugString": slug.current }`
+  );
+
   return tools.map((tool: any) => ({
-    slug: tool.slug,
+    // 3. Force it to be a pure JavaScript string to satisfy Next.js
+    slug: String(tool.slugString),
   }));
 }
 export default async function ToolDetailPage({ params }: { params: { slug: string } }) {
