@@ -14,6 +14,7 @@ interface Counselor {
   designation: string;
   experience: string;
   sessionsCompleted?: string;
+  email: string; 
   languages: string;
   mode: string;
   fees: number;
@@ -193,6 +194,7 @@ export default function BookPage() {
       patient_email: user.email, 
       patient_notes: patientData.message,
       counselor_id: selectedCounselorId,
+      counselor_email: selectedCounselor.email,
       counselor_name: selectedCounselor.name,
       appointment_date: selectedDate,
       time_slots: selectedSlots,

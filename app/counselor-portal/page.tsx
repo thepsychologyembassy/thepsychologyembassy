@@ -46,7 +46,7 @@ export default function CounselorPortal() {
       const { data: apts, error } = await supabase
         .from("appointments")
         .select("*")
-        .eq("counselor_id", sanityCounselor._id)
+        .eq("counselor_email", userEmail)
         .eq("status", "paid") // STRICTLY ONLY PAID APPOINTMENTS
         .order("appointment_date", { ascending: true });
 
