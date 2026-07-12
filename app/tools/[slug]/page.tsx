@@ -5,20 +5,27 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 export const revalidate = 60;
+
 export async function generateStaticParams() {
-  // 1. Only fetch tools where the slug actually exists (defined)
-  // 2. Alias it to 'slugString' to guarantee we don't accidentally fetch the raw Sanity object
   const tools = await client.fetch(
     `*[_type == "tool" && defined(slug.current)]{ "slugString": slug.current }`
   );
 
   return tools.map((tool: any) => ({
-    // 3. Force it to be a pure JavaScript string to satisfy Next.js
     slug: String(tool.slugString),
   }));
 }
-export default async function ToolDetailPage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+
+// Use 'any' for params to bypass strict TypeScript errors during the build
+export default async function ToolDetailPage({ params }: { params: any }) {
+  
+  // BULLETPROOF PARAMS HANDLING: Await the params object before extracting the slug
+  const resolvedParams = await params;
+  const slug = resolvedParams?.slug;
+
+  if (!slug) {
+    return notFound();
+  }
 
   // Fetch tool data AND resolve the PDF asset URL in the same query
   const tool = await client.fetch(
@@ -30,7 +37,7 @@ export default async function ToolDetailPage({ params }: { params: { slug: strin
   );
 
   if (!tool) {
-    notFound();
+    return notFound();
   }
 
   return (
