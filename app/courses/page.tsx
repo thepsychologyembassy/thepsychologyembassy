@@ -19,7 +19,7 @@ interface Course {
   duration: string;
   provider: string;
   externalLink?: string;
-  image?: any; 
+  image?: any;
   isComingSoon?: boolean; // NEW FIELD
 }
 
@@ -136,29 +136,18 @@ export default function CoursesPage() {
         ) : (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {courses.map((opp, i) => {
-              const isComingSoon = opp.isComingSoon;
-              const href = opp.provider === "External" && opp.externalLink
-                ? opp.externalLink
-                : `/courses/${opp.slug?.current || ""}`;
-              const target = opp.provider === "External" ? "_blank" : "_self";
-              const rel = opp.provider === "External" ? "noopener noreferrer" : "";
-              
-              const className = `group flex flex-col rounded-2xl border border-[#CFE3E8]/10 bg-[#1A1C20]/60 backdrop-blur-md overflow-hidden ${
-                isComingSoon 
-                  ? "opacity-60 cursor-default" 
-                  : "transition-all hover:bg-[#1A1C20]/80 hover:border-[#CFE3E8]/30"
-              }`;
+              const isComingSoon = opp.isComingSoon === true;
 
-              // The inside of the card (Shared between the Link and the Div)
-              const InnerCard = () => (
+              // Clean JSX variable instead of a functional component
+              const cardContent = (
                 <>
-                  <div className="relative h-44 w-full overflow-hidden">
+                  <div className="relative h-44 w-full overflow-hidden shrink-0">
                     {opp.image ? (
                       <Image
                         src={urlFor(opp.image).width(600).height(352).fit("crop").url()}
                         alt={opp.title}
                         fill
-                        className={`object-cover ${isComingSoon ? "grayscale" : "transition-transform duration-500 group-hover:scale-105"}`}
+                        className={`object-cover ${isComingSoon ? "grayscale opacity-80" : "transition-transform duration-500 group-hover:scale-105"}`}
                       />
                     ) : (
                       <div className="h-2 w-full bg-gradient-to-r from-[#CFE3E8]/20 via-[#4F6F52]/30 to-[#CFE3E8]/20" />
@@ -192,7 +181,7 @@ export default function CoursesPage() {
                       </div>
                     )}
 
-                    <h3 className={`font-serif text-2xl font-medium ${isComingSoon ? "text-[#FBF8F2]/70 mt-4 mb-0" : "text-[#FBF8F2] mb-3"}`}>
+                    <h3 className={`font-serif text-2xl font-medium ${isComingSoon ? "text-[#FBF8F2]/70 mt-2 mb-0" : "text-[#FBF8F2] mb-3"}`}>
                       {opp.title}
                     </h3>
                     
@@ -218,15 +207,15 @@ export default function CoursesPage() {
                 </>
               );
 
-              // 🔴 BULLETPROOF FIX: If it's coming soon, it renders as a pure <div>. No link tag exists!
+              // 🔴 BULLETPROOF FIX: Renders as a pure <div>. Cannot be clicked!
               if (isComingSoon) {
                 return (
                   <div
                     key={opp._id}
-                    ref={(el) => { cardsRef.current[i] = el; }}
-                    className={className}
+                    ref={(el) => { cardsRef.current[i] = el as any; }}
+                    className="group flex flex-col rounded-2xl border border-[#CFE3E8]/10 bg-[#1A1C20]/60 backdrop-blur-md overflow-hidden opacity-60 select-none"
                   >
-                    <InnerCard />
+                    {cardContent}
                   </div>
                 );
               }
@@ -235,13 +224,13 @@ export default function CoursesPage() {
               return (
                 <Link
                   key={opp._id}
-                  href={href}
-                  target={target}
-                  rel={rel}
-                  ref={(el) => { cardsRef.current[i] = el; }}
-                  className={className}
+                  href={opp.provider === "External" && opp.externalLink ? opp.externalLink : `/courses/${opp.slug?.current || ""}`}
+                  target={opp.provider === "External" ? "_blank" : "_self"}
+                  rel={opp.provider === "External" ? "noopener noreferrer" : ""}
+                  ref={(el) => { cardsRef.current[i] = el as any; }}
+                  className="group flex flex-col rounded-2xl border border-[#CFE3E8]/10 bg-[#1A1C20]/60 backdrop-blur-md overflow-hidden transition-all hover:bg-[#1A1C20]/80 hover:border-[#CFE3E8]/30"
                 >
-                  <InnerCard />
+                  {cardContent}
                 </Link>
               );
             })}
