@@ -15,8 +15,11 @@ interface Program {
   duration?: string;
   price: number;
   totalPositions: number;
-  image?: any; 
+  image?: any;
   isComingSoon?: boolean;
+  provider?: string; // "Internal" | "External"
+  externalLink?: string;
+  customQuestions?: string[];
 }
 
 export default function ProgramsPage() {
@@ -34,6 +37,10 @@ export default function ProgramsPage() {
     phone: "",
     sop: "",
   });
+
+  // Resume upload + dynamic per-program questions (merged in from /courses)
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchProgramsAndInventory = async () => {
@@ -71,25 +78,83 @@ export default function ProgramsPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setResumeFile(e.target.files[0]);
+    }
+  };
+
+  const handleCustomChange = (question: string, answer: string) => {
+    setCustomAnswers((prev) => ({ ...prev, [question]: answer }));
+  };
+
+  const openProgram = (program: Program) => {
+    // External programs skip our application flow entirely and send the
+    // applicant straight to the partner's own application page.
+    if (program.provider === "External" && program.externalLink) {
+      window.open(program.externalLink, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setFormData({ name: "", email: "", phone: "", sop: "" });
+    setResumeFile(null);
+    setCustomAnswers({});
+    setStatusMessage("");
+    setSelectedProgram(program);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProgram) return;
-    setIsSubmitting(true);
-    setStatusMessage("Submitting your application...");
 
-    const payload = {
-      program_id: selectedProgram._id,
-      program_title: selectedProgram.title,
-      program_type: selectedProgram._type,
-      applicant_name: formData.name,
-      applicant_email: formData.email,
-      // Note: We are passing phone inside SOP if the API doesn't explicitly extract it, 
-      // or you can update the /api/applications/submit route to accept phone.
-      statement_of_purpose: `Phone: ${formData.phone}\n\n${formData.sop}`,
-    };
+    if (!resumeFile) {
+      setStatusMessage("Please attach your resume in PDF format.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage("Uploading resume...");
 
     try {
-      // SECURE: Routing through the server-side endpoint instead of the client DB
+      // 1. SECURE FILENAME GENERATION — unguessable name, original file never trusted
+      const fileExt = resumeFile.name.split(".").pop();
+      const secureFileName = `${self.crypto.randomUUID()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("resumes")
+        .upload(secureFileName, resumeFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("resumes")
+        .getPublicUrl(secureFileName);
+
+      const finalResumeLink = publicUrlData.publicUrl;
+
+      setStatusMessage("Submitting application securely...");
+
+      // 2. Build the statement of purpose: use this program's custom
+      // questions if it has any, otherwise fall back to the generic SOP box.
+      const hasCustomQuestions =
+        selectedProgram.customQuestions && selectedProgram.customQuestions.length > 0;
+
+      const sopBody = hasCustomQuestions
+        ? Object.entries(customAnswers)
+            .map(([q, a]) => `Q: ${q}\nA: ${a}`)
+            .join("\n\n")
+        : formData.sop;
+
+      const payload = {
+        program_id: selectedProgram._id,
+        program_title: selectedProgram.title,
+        program_type: selectedProgram._type,
+        applicant_name: formData.name,
+        applicant_email: formData.email,
+        statement_of_purpose: `Phone: ${formData.phone}\n\n${sopBody}`,
+        resume_link: finalResumeLink,
+      };
+
+      // 3. SECURE SERVER-SIDE SUBMISSION — no direct Supabase writes from the client
       const res = await fetch("/api/applications/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,10 +166,18 @@ export default function ProgramsPage() {
       setStatusMessage(
         "Success! Your application is under review. We will email you shortly."
       );
+
       setTimeout(() => {
         setFormData({ name: "", email: "", phone: "", sop: "" });
+        setResumeFile(null);
+        setCustomAnswers({});
         setSelectedProgram(null);
         setStatusMessage("");
+
+        const fileInput = document.getElementById(
+          "resume-upload"
+        ) as HTMLInputElement;
+        if (fileInput) fileInput.value = "";
       }, 4000);
     } catch (error) {
       console.error(error);
@@ -119,9 +192,6 @@ export default function ProgramsPage() {
       <Navbar />
 
       {/* ── HERO with video background ──────────────────────────────── */}
-      {/* FIX: video placed directly in the section, no wrapper div,
-          no explicit z-index — DOM order (video → overlay → text) handles
-          stacking without any fight with the body background colour. */}
       <section
         ref={heroRef}
         className="relative h-[100vh] w-full overflow-hidden bg-[#1A1C20]"
@@ -136,10 +206,8 @@ export default function ProgramsPage() {
           <source src="/videos/mountain-climb.mp4" type="video/mp4" />
         </video>
 
-        {/* Dark gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#1A1C20]/50 via-[#1A1C20]/30 to-[#FBF8F2]" />
 
-        {/* Hero text */}
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#CFE3E8]">
             Education & Growth
@@ -173,13 +241,13 @@ export default function ProgramsPage() {
               const seatsLeft = program.totalPositions - takenSeats;
               const isWaitlist = seatsLeft <= 0;
               const isComingSoon = program.isComingSoon === true;
+              const isExternal = program.provider === "External";
 
               return (
                 <div
                   key={program._id}
                   className="flex flex-col justify-between overflow-hidden rounded-3xl border border-[#3A3A38]/10 bg-white/60 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-1 hover:shadow-md"
                 >
-                  {/* ── FIX: Sanity thumbnail image ── */}
                   {program.image ? (
                     <div className="relative h-52 w-full overflow-hidden">
                       <Image
@@ -190,7 +258,6 @@ export default function ProgramsPage() {
                       />
                     </div>
                   ) : (
-                    // Thin accent bar when no image uploaded
                     <div className="h-1.5 w-full bg-gradient-to-r from-[#88B7B5] via-[#4F6F52] to-[#88B7B5]" />
                   )}
 
@@ -204,6 +271,10 @@ export default function ProgramsPage() {
                       {isComingSoon ? (
                         <span className="text-xs font-bold uppercase tracking-widest text-[#F6D86B]">
                           Coming Soon
+                        </span>
+                      ) : isExternal ? (
+                        <span className="text-xs font-bold uppercase tracking-widest text-[#88B7B5]">
+                          External
                         </span>
                       ) : isWaitlist ? (
                         <span className="text-xs font-bold uppercase tracking-widest text-[#A65D47]">
@@ -241,7 +312,7 @@ export default function ProgramsPage() {
                       </p>
                     </div>
                     <button
-                      onClick={() => !isComingSoon && setSelectedProgram(program)}
+                      onClick={() => !isComingSoon && openProgram(program)}
                       disabled={isComingSoon}
                       className={`rounded-full px-6 py-3 text-sm font-semibold tracking-wide text-white transition-colors ${
                         isComingSoon
@@ -250,9 +321,15 @@ export default function ProgramsPage() {
                           ? "bg-[#A65D47] hover:bg-[#A65D47]/80"
                           : "bg-[#2C4C5B] hover:bg-[#1E3A5F]"
                       }`}
-                   >
-                      {isComingSoon ? "Coming Soon" : isWaitlist ? "Join Waitlist" : "Apply Now"}
-                   </button>
+                    >
+                      {isComingSoon
+                        ? "Coming Soon"
+                        : isExternal
+                        ? "Apply on Partner Site"
+                        : isWaitlist
+                        ? "Join Waitlist"
+                        : "Apply Now"}
+                    </button>
                   </div>
                 </div>
               );
@@ -343,20 +420,57 @@ export default function ProgramsPage() {
                 />
               </div>
 
+              {/* Resume upload — merged in from /courses */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
-                  Statement of Purpose
+                  Upload Resume (PDF)
                 </label>
-                <textarea
-                  name="sop"
+                <input
+                  id="resume-upload"
+                  type="file"
+                  accept=".pdf"
                   required
-                  rows={4}
-                  value={formData.sop}
-                  onChange={handleChange}
-                  placeholder="Why are you interested in this program?"
-                  className="w-full resize-none rounded-xl border border-[#3A3A38]/20 bg-white/50 px-4 py-3 text-[#3A3A38] focus:border-[#4F6F52] focus:outline-none"
+                  onChange={handleFileChange}
+                  className="w-full text-sm text-[#3A3A38]/80 file:mr-4 file:rounded-full file:border-0 file:bg-[#3A3A38]/10 file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-widest file:text-[#2C4C5B] hover:file:bg-[#3A3A38]/20 transition-colors cursor-pointer"
                 />
               </div>
+
+              {/* Per-program custom questions if this program has any,
+                  otherwise fall back to a generic Statement of Purpose box */}
+              {selectedProgram.customQuestions &&
+              selectedProgram.customQuestions.length > 0 ? (
+                <div className="flex flex-col gap-6 border-t border-[#3A3A38]/10 pt-6">
+                  {selectedProgram.customQuestions.map((q: string, i: number) => (
+                    <div key={i} className="flex flex-col gap-2">
+                      <label className="text-sm font-medium leading-relaxed text-[#3A3A38]/80">
+                        {q}
+                      </label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={customAnswers[q] || ""}
+                        onChange={(e) => handleCustomChange(q, e.target.value)}
+                        className="w-full resize-none rounded-xl border border-[#3A3A38]/20 bg-white/50 px-4 py-3 text-[#3A3A38] focus:border-[#4F6F52] focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+                    Statement of Purpose
+                  </label>
+                  <textarea
+                    name="sop"
+                    required
+                    rows={4}
+                    value={formData.sop}
+                    onChange={handleChange}
+                    placeholder="Why are you interested in this program?"
+                    className="w-full resize-none rounded-xl border border-[#3A3A38]/20 bg-white/50 px-4 py-3 text-[#3A3A38] focus:border-[#4F6F52] focus:outline-none"
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"

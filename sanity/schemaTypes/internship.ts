@@ -13,6 +13,13 @@ export default {
       validation: (Rule: any) => Rule.required()
     },
     {
+      name: 'slug',
+      title: 'Slug (URL)',
+      type: 'slug',
+      options: { source: 'title' },
+      validation: (Rule: any) => Rule.required(),
+    },
+    {
       name: 'isComingSoon',
       title: 'Is Coming Soon?',
       type: 'boolean',
