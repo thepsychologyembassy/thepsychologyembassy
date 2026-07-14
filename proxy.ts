@@ -26,10 +26,20 @@ export async function proxy(req: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   
-  const protectedRoutes = ['/dashboard', '/counselor-portal', '/admin'];
-  const isProtected = protectedRoutes.some(r => req.nextUrl.pathname.startsWith(r));
+  // 1. Check if they are trying to access the Admin portal
+  const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
+  
+  if (isAdminRoute) {
+    // If they aren't logged in, or their email is NOT the Head Admin, bounce them
+    if (!user || user.email !== process.env.HEAD_ADMIN_EMAIL) {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+  }
 
-  if (isProtected && !user) {
+  // 2. Check standard protected routes (Dashboard & Counselor Portal)
+  const isProtectedRoute = req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/counselor-portal');
+
+  if (isProtectedRoute && !user) {
     const loginUrl = new URL('/login', req.url);
     return NextResponse.redirect(loginUrl);
   }

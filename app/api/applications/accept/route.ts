@@ -24,6 +24,9 @@ export async function POST(request: Request) {
     if (authError || !user || !user.email) {
       return NextResponse.json({ error: "Invalid session or token" }, { status: 401 });
     }
+    if (user.email !== process.env.HEAD_ADMIN_EMAIL) {
+      return NextResponse.json({ error: "Forbidden: Head Admin access required." }, { status: 403 });
+    }
 
     // 2. CRITICAL FIX: VERIFY ADMIN ROLE VIA SANITY
     const settings = await client.fetch(`*[_type == "siteSettings"][0]{ adminEmails }`);
