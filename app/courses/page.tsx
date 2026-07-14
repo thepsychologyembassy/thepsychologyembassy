@@ -224,7 +224,13 @@ export default function CoursesPage() {
               return (
                 <Link
                   key={opp._id}
-                  href={opp.provider === "External" && opp.externalLink ? opp.externalLink : `/courses/${opp.slug?.current || ""}`}
+                  href={
+                    opp.provider === "External" && opp.externalLink
+                    ? opp.externalLink
+                    : opp.slug?.current
+                    ? `/courses/${opp.slug.current}`
+                    : "#"
+                  }
                   target={opp.provider === "External" ? "_blank" : "_self"}
                   rel={opp.provider === "External" ? "noopener noreferrer" : ""}
                   ref={(el) => { cardsRef.current[i] = el as any; }}
