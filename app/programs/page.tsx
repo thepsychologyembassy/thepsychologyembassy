@@ -15,7 +15,8 @@ interface Program {
   duration?: string;
   price: number;
   totalPositions: number;
-  image?: any; // Sanity image asset
+  image?: any; 
+  isComingSoon?: boolean;
 }
 
 export default function ProgramsPage() {
@@ -171,6 +172,7 @@ export default function ProgramsPage() {
               const takenSeats = paidCounts[program._id] || 0;
               const seatsLeft = program.totalPositions - takenSeats;
               const isWaitlist = seatsLeft <= 0;
+              const isComingSoon = program.isComingSoon === true;
 
               return (
                 <div
@@ -199,7 +201,11 @@ export default function ProgramsPage() {
                           ? "Certification Course"
                           : "Clinical Internship"}
                       </span>
-                      {isWaitlist ? (
+                      {isComingSoon ? (
+                        <span className="text-xs font-bold uppercase tracking-widest text-[#F6D86B]">
+                          Coming Soon
+                        </span>
+                      ) : isWaitlist ? (
                         <span className="text-xs font-bold uppercase tracking-widest text-[#A65D47]">
                           Waitlist Open
                         </span>
@@ -235,15 +241,18 @@ export default function ProgramsPage() {
                       </p>
                     </div>
                     <button
-                      onClick={() => setSelectedProgram(program)}
+                      onClick={() => !isComingSoon && setSelectedProgram(program)}
+                      disabled={isComingSoon}
                       className={`rounded-full px-6 py-3 text-sm font-semibold tracking-wide text-white transition-colors ${
-                        isWaitlist
+                        isComingSoon
+                          ? "bg-[#3A3A38]/30 cursor-not-allowed"
+                          : isWaitlist
                           ? "bg-[#A65D47] hover:bg-[#A65D47]/80"
                           : "bg-[#2C4C5B] hover:bg-[#1E3A5F]"
                       }`}
-                    >
-                      {isWaitlist ? "Join Waitlist" : "Apply Now"}
-                    </button>
+                   >
+                      {isComingSoon ? "Coming Soon" : isWaitlist ? "Join Waitlist" : "Apply Now"}
+                   </button>
                   </div>
                 </div>
               );
