@@ -148,8 +148,8 @@ export default function DashboardPage() {
               const startTime = new Date(aptDate.setHours(startHour, 0, 0, 0));
               const endTime = new Date(aptDate.setHours(endHour, 0, 0, 0));
               
-              // Exactly 15 minutes before
-              const activationTime = new Date(startTime.getTime() - 15 * 60000); 
+              // Exactly 30 minutes before
+              const activationTime = new Date(startTime.getTime() - 30 * 60000); 
 
               // Check if meeting is currently happening or about to start
               const isLinkActive = currentTime >= activationTime && currentTime < endTime;
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                             className={`w-full whitespace-nowrap rounded-full px-8 py-3 text-sm font-semibold tracking-wide transition-all sm:w-auto 
                               ${isLinkActive && apt.meeting_link ? 'bg-[#2C4C5B] text-[#FBF8F2] hover:-translate-y-1 hover:shadow-lg' : 'cursor-not-allowed bg-[#2C4C5B]/10 text-[#2C4C5B]/40'}`}
                           >
-                            {isLinkActive && apt.meeting_link ? "Join Video Session" : "Link Activates 15m Prior"}
+                            {isLinkActive && apt.meeting_link ? "Join Video Session" : "Link Activates 30m Prior"}
                           </button>
                           {!isLinkActive && <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/50">Check back closer to start time</p>}
                         </>

@@ -108,6 +108,13 @@ export default {
       description: 'If they offer in-person sessions, provide the full address. This will be securely emailed to the patient before their appointment.',
       // This magically hides the address box if they only do online sessions!
       hidden: ({ document }: any) => document?.mode === 'online'
+    },
+    {
+      name: 'meetingLink',
+      title: 'Video Session Link',
+      type: 'url',
+      description: 'This counselor\'s permanent Zoom/Google Meet room. Used automatically for every online session — saved to the appointment and emailed to the counselor when a patient pays. The patient only sees it in their dashboard 30 minutes before the session starts.',
+      hidden: ({ document }: any) => document?.mode === 'in-person'
     }
   ],
 

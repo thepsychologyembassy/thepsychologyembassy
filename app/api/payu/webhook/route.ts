@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { sendAppointmentConfirmationEmails } from "../../../../lib/email";
 
 // Use Admin client to bypass RLS for server operations
 const supabaseAdmin = createClient(
@@ -36,9 +37,11 @@ export async function POST(req: Request) {
       const targetTable = isProgram ? "program_applications" : "appointments";
 
       // 1. IDEMPOTENCY GUARD: Check the current database state first
+      // (select "*" here so we have everything needed to send confirmation
+      // emails below, without a second round-trip)
       const { data: existingRecord } = await supabaseAdmin
         .from(targetTable)
-        .select("status")
+        .select("*")
         .eq("id", udf1)
         .single();
 
@@ -53,6 +56,12 @@ export async function POST(req: Request) {
           status: "paid",
           payment_order_id: txnid   // ADD THIS
         }).eq("id", udf1);
+
+        // 3. Send confirmation emails (appointments only — program
+        // applications have their own separate accept/expire emails)
+        if (!isProgram && existingRecord) {
+          await sendAppointmentConfirmationEmails(existingRecord as any);
+        }
       }
       else {
         // Only delete failed therapy appointments, leave failed program apps alone so they can retry
