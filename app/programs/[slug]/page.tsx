@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "../../../components/Navbar";
@@ -10,7 +10,6 @@ import { supabase } from "../../../lib/supabase";
 
 export default function ProgramDetailsPage() {
   const params = useParams<{ slug: string }>();
-  const router = useRouter();
 
   const [program, setProgram] = useState<any>(null);
   const [seatsTaken, setSeatsTaken] = useState(0);
