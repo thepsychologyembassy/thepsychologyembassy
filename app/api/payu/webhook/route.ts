@@ -47,6 +47,9 @@ export async function POST(request: Request) {
           .select("*")
           .eq("id", udf1)
           .single();
+        if (appointment && appointment.status === "paid") {
+          return NextResponse.json({ status: "already_processed_idempotent" });
+        }
 
         if (appointment && appointment.counselor_id) {
           // B. Fetch Counselor details from Sanity

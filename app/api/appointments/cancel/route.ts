@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { client } from "../../../../lib/sanity";
+import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Secure server-side client
 const supabaseAdmin = createClient(
@@ -119,6 +121,50 @@ export async function POST(request: Request) {
       .eq("id", appointmentId);
 
     if (updateError) throw updateError;
+    // 5. SEND NOTIFICATION EMAILS
+    try {
+      const aptDate = new Date(appointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      // Email Patient
+      if (appointment.patient_email) {
+        await resend.emails.send({
+          from: "The Psychology Embassy <bookings@contact.psychologyembassy.com>",
+          to: appointment.patient_email,
+          subject: "Session Cancelled & Refund Processed",
+          html: `
+            <div style="font-family: sans-serif; color: #3A3A38;">
+              <h2 style="color: #A65D47;">Appointment Cancelled</h2>
+              <p>Your session on ${aptDate} has been successfully cancelled.</p>
+              ${appointment.status === "paid" ? `<p>A refund has been initiated to your original payment method. Depending on your bank, it may take 5-7 business days to reflect in your account.</p>` : ''}
+              <p>If you have any questions, please reply to this email.</p>
+            </div>
+          `
+        });
+      }
+
+      // Email Counselor
+      if (appointment.counselor_id) {
+        const counselor = await client.fetch(`*[_type == "counselor" && _id == $id][0]{ email, name }`, { id: appointment.counselor_id });
+        
+        if (counselor && counselor.email) {
+          await resend.emails.send({
+            from: "The Psychology Embassy <bookings@contact.psychologyembassy.com>",
+            to: counselor.email,
+            subject: "Session Cancelled by Patient",
+            html: `
+              <div style="font-family: sans-serif; color: #3A3A38;">
+                <h2>Schedule Update</h2>
+                <p>A patient has cancelled their session scheduled for <strong>${aptDate}</strong>.</p>
+                <p>This time slot has been freed up on your calendar automatically.</p>
+              </div>
+            `
+          });
+        }
+      }
+    } catch (emailError) {
+      console.error("Non-fatal: Failed to send cancellation emails:", emailError);
+      // We don't throw here because the cancellation/refund already succeeded.
+    }
 
     return NextResponse.json({ success: true, message: "Appointment cancelled and refunded successfully." });
   } catch (error) {
