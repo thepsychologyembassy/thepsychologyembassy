@@ -27,10 +27,16 @@ interface AppointmentRow {
 
 function sessionStart(appointment_date: string, time_slots: number[]) {
   const startHour = Math.min(...time_slots);
-  // appointment_date is a plain date (no time); attach the start hour in local server time.
-  const d = new Date(appointment_date);
-  d.setHours(startHour, 0, 0, 0);
-  return d;
+  // appointment_date is a plain "YYYY-MM-DD" and time_slots hours are IST
+  // (that's how they're shown everywhere else in the app). The server
+  // this runs on (Vercel / GitHub Actions) is UTC, so we convert IST -> UTC
+  // explicitly rather than relying on setHours(), which would apply the
+  // server's own local timezone (UTC) and silently produce a ~5.5 hour
+  // offset from the intended IST time.
+  const [year, month, day] = appointment_date.split("-").map(Number);
+  const istMinutesSinceMidnight = startHour * 60;
+  const utcMinutesSinceMidnight = istMinutesSinceMidnight - 330; // IST is UTC+5:30
+  return new Date(Date.UTC(year, month - 1, day, 0, utcMinutesSinceMidnight, 0, 0));
 }
 
 function formatTime(h: number) {
@@ -64,17 +70,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Only need to look at sessions happening today, that are paid, and
-    // haven't had a reminder sent yet. We narrow the exact 30-minute
-    // window in code below since time_slots is an hour array, not a
-    // timestamp column.
-    const todayStr = new Date().toISOString().slice(0, 10);
+    // Look at sessions on "today" or "yesterday" in UTC — an IST session
+    // date can fall on either UTC calendar date depending on the time of
+    // day (IST is UTC+5:30), so a single UTC-today filter would silently
+    // miss early-morning IST sessions. The precise 20-40 minute window
+    // check below (using sessionStart, which converts IST->UTC properly)
+    // is what actually decides who gets a reminder.
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
     const { data: appointments, error } = await supabaseAdmin
       .from("appointments")
       .select("*")
       .eq("status", "paid")
-      .eq("appointment_date", todayStr)
+      .in("appointment_date", [yesterdayStr, todayStr])
       .or("reminder_sent.is.null,reminder_sent.eq.false");
 
     if (error) {
@@ -82,7 +93,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Failed to fetch appointments" }, { status: 500 });
     }
 
-    const now = new Date();
     let sentCount = 0;
 
     for (const apt of (appointments || []) as AppointmentRow[]) {
