@@ -142,7 +142,6 @@ export default function Home() {
       <section className="relative w-full overflow-hidden px-6 py-24 sm:py-32" style={{ backgroundImage: "url('https://cdn.pixabay.com/photo/2013/02/20/11/30/autumn-83761_1280.jpg')", backgroundSize: "cover", backgroundPosition: "center" }}>
         <div className="absolute inset-0 bg-black/60"></div>
         <div className="relative z-10 mx-auto mb-16 text-center">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.35em] text-[#CFE3E8]">What We Do</p>
           <h2 className="font-serif text-3xl font-medium tracking-wide text-[#FBF8F2] sm:text-4xl">
             Services We Offer
           </h2>
