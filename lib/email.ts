@@ -98,7 +98,7 @@ export async function sendAppointmentConfirmationEmails(appointment: Appointment
     `;
 
     await resend.emails.send({
-      from: "Psychology Embassy <contact@psychologyembassy.com>",
+      from: "Psychology Embassy <bookings@contact.psychologyembassy.com>",
       to: [appointment.patient_email],
       subject: `Session Confirmed — ${dateStr}`,
       html: patientHtml,
@@ -124,7 +124,7 @@ export async function sendAppointmentConfirmationEmails(appointment: Appointment
       `;
 
       await resend.emails.send({
-        from: "Psychology Embassy <contact@psychologyembassy.com>",
+        from: "Psychology Embassy <bookings@contact.psychologyembassy.com>",
         to: [appointment.counselor_email],
         subject: `New Booking — ${appointment.patient_name} on ${dateStr}`,
         html: counselorHtml,

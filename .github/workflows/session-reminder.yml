@@ -1,0 +1,23 @@
+name: Session Reminder Cron
+
+on:
+  schedule:
+    # GitHub's minimum interval is 5 minutes; every 10 keeps us well within
+    # the 20-40 minute window the endpoint checks for, even with typical lag.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {} # lets you manually trigger a run from the Actions tab to test
+
+jobs:
+  trigger-reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call session reminder endpoint
+        run: |
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X GET "${{ secrets.SITE_URL }}/api/cron/session-reminder" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "HTTP status: $response"
+          cat /tmp/body.txt
+          if [ "$response" -ne 200 ]; then
+            echo "Session reminder call failed"
+            exit 1
+          fi
