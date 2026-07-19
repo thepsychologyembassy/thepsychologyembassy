@@ -12,12 +12,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call session reminder endpoint
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X GET "${{ secrets.SITE_URL }}/api/cron/session-reminder" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          # Trim any accidental leading/trailing whitespace or newlines that
+          # can sneak into a pasted secret and break URL/host resolution.
+          CLEAN_SITE_URL=$(echo -n "$SITE_URL" | xargs)
+          CLEAN_CRON_SECRET=$(echo -n "$CRON_SECRET" | xargs)
+
+          # Diagnostics that don't leak the actual secret values, just their
+          # shape, so a bad secret is obvious without exposing it.
+          echo "SITE_URL length: ${#CLEAN_SITE_URL}"
+          echo "SITE_URL starts with https:// : $(echo "$CLEAN_SITE_URL" | grep -c '^https://' || true)"
+          echo "CRON_SECRET length: ${#CLEAN_CRON_SECRET}"
+
+          if [ -z "$CLEAN_SITE_URL" ]; then
+            echo "SITE_URL secret is empty — set it in repo Settings > Secrets > Actions"
+            exit 1
+          fi
+          if [ -z "$CLEAN_CRON_SECRET" ]; then
+            echo "CRON_SECRET secret is empty — set it in repo Settings > Secrets > Actions"
+            exit 1
+          fi
+
+          URL="${CLEAN_SITE_URL%/}/api/cron/session-reminder"
+          echo "Calling: $URL"
+
+          response=$(curl -sS -o /tmp/body.txt -w "%{http_code}" -X GET "$URL" \
+            -H "Authorization: Bearer $CLEAN_CRON_SECRET")
+          curl_exit=$?
+
+          echo "curl exit code: $curl_exit"
           echo "HTTP status: $response"
+          echo "Response body:"
           cat /tmp/body.txt
+
+          if [ "$curl_exit" -ne 0 ]; then
+            echo "curl itself failed (network/DNS issue) — check SITE_URL is a real, resolvable domain"
+            exit 1
+          fi
           if [ "$response" -ne 200 ]; then
-            echo "Session reminder call failed"
+            echo "Session reminder call returned non-200"
             exit 1
           fi
