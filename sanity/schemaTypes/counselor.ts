@@ -1,4 +1,5 @@
 import { orderRankField, orderRankOrdering } from '@sanity/orderable-document-list';
+
 export default {
   name: 'counselor',
   title: 'Counselor',
@@ -6,70 +7,77 @@ export default {
   orderings: [orderRankOrdering],
   fields: [
     orderRankField({ type: 'counselor' }),
-    { 
-      name: 'name', 
-      title: 'Name', 
-      type: 'string', 
-      validation: (Rule: any) => Rule.required() 
-    },
-    { 
-      name: 'image', 
-      title: 'Profile Photo', 
-      type: 'image', 
-      options: { hotspot: true } 
-    },
-    { 
-      name: 'designation', 
-      title: 'Designation', 
-      type: 'string',
-      validation: (Rule: any) => Rule.required() 
-    },
-    { 
-      name: 'experience', 
-      title: 'Years of Experience', 
-      type: 'string',
-      description: 'e.g., "5+ Years"'
-    },
-    { 
-      name: 'sessionsCompleted', 
-      title: 'Sessions Completed', 
-      type: 'string', 
-      description: 'e.g., "500+" or "1,200+"' 
-    },
-    { 
-      name: 'education', 
-      title: 'Educational Qualifications', 
-      type: 'string' 
-    },
-    { 
-      name: 'languages', 
-      title: 'Languages Spoken', 
-      type: 'string',
-      description: 'e.g., English, Hindi'
-    },
-    { 
-      name: 'bio', 
-      title: 'About the Counselor', 
-      type: 'text' 
-    },
+    {
+       name: 'name',
+       title: 'Name',
+       type: 'string',
+       validation: (Rule: any) => Rule.required()
+     },
+    {
+       name: 'image',
+       title: 'Profile Photo',
+       type: 'image',
+       options: { hotspot: true }
+     },
+    {
+       name: 'designation',
+       title: 'Designation',
+       type: 'string',
+       validation: (Rule: any) => Rule.required()
+     },
+    {
+       name: 'speciality',
+       title: 'Speciality',
+       type: 'string',
+       description: 'e.g., "Trauma & Anxiety" or "Clinical Psychology". Used to display the top 3 counselors.',
+       validation: (Rule: any) => Rule.required()
+     },
+    {
+       name: 'experience',
+       title: 'Years of Experience',
+       type: 'string',
+       description: 'e.g., "5+ Years"'
+     },
+    {
+       name: 'sessionsCompleted',
+       title: 'Sessions Completed',
+       type: 'string',
+       description: 'e.g., "500+" or "1,200+"'
+     },
+    {
+       name: 'education',
+       title: 'Educational Qualifications',
+       type: 'string'
+     },
+    {
+       name: 'languages',
+       title: 'Languages Spoken',
+       type: 'string',
+       description: 'e.g., English, Hindi'
+     },
+    {
+       name: 'bio',
+       title: 'About the Counselor',
+       type: 'text'
+     },
     // ---- BOOKING ENGINE LOGIC FIELDS ----
-    { 
-      name: 'fees', 
-      title: 'Fees per Session (₹)', 
-      type: 'number', // Must be a number for checkout math!
-      description: 'Enter just the number (e.g., 1500). The checkout system will use this to calculate the total price.',
-      validation: (Rule: any) => Rule.required().min(0)
+    {
+       name: 'fees',
+       title: 'Fees per Session (₹)',
+       type: 'number',
+       description: 'Enter just the number (e.g., 1500). The checkout system will use this to calculate the total price.',
+       validation: (Rule: any) => Rule.required().min(0)
     },
     {
       name: 'email',
       title: 'Counselor Login Email',
       type: 'string',
     },
-    { 
-      name: 'mode', 
-      title: 'Mode of Consultation', 
-      type: 'string', 
-      options: {
+    {
+       name: 'mode',
+       title: 'Mode of Consultation',
+       type: 'string',
+       options: {
         list: [
           { title: 'Online Only', value: 'online' },
           { title: 'In-Person Only', value: 'in-person' },
@@ -106,16 +114,14 @@ export default {
       title: 'Clinic / Office Address',
       type: 'text',
       description: 'If they offer in-person sessions, provide the full address. This will be securely emailed to the patient before their appointment.',
-      // This magically hides the address box if they only do online sessions!
       hidden: ({ document }: any) => document?.mode === 'online'
     },
     {
       name: 'meetingLink',
       title: 'Video Session Link',
       type: 'url',
-      description: 'This counselor\'s permanent Zoom/Google Meet room. Used automatically for every online session — saved to the appointment and emailed to the counselor when a patient pays. The patient only sees it in their dashboard 30 minutes before the session starts.',
+      description: 'This counselor\'s permanent Zoom/Google Meet room. Used automatically for every online session.',
       hidden: ({ document }: any) => document?.mode === 'in-person'
     }
   ],
-
 }

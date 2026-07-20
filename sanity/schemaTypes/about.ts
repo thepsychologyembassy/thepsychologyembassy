@@ -3,41 +3,60 @@ export default {
   title: 'About Page',
   type: 'document',
   fields: [
-    { 
-      name: 'title', 
-      title: 'Page Title', 
-      type: 'string', 
-      initialValue: 'About Us' 
-    },
-    { 
-      name: 'subtitle', 
-      title: 'Subtitle', 
-      type: 'text',
+    {
+       name: 'title',
+       title: 'Page Title',
+       type: 'string',
+       initialValue: 'About Us'
+     },
+    {
+       name: 'subtitle',
+       title: 'Subtitle',
+       type: 'text',
       description: 'A short, impactful sentence below the main title.'
     },
-    { 
-      name: 'mainImage', 
-      title: 'Main Story Image', 
-      type: 'image', 
-      options: { hotspot: true } 
+    {
+       name: 'mainImage',
+       title: 'Main Story Image',
+       type: 'image',
+       options: { hotspot: true }
+     },
+     // --- NEW FOUNDER FIELDS ---
+    {
+       name: 'founderName',
+       title: 'Founder Name',
+       type: 'string'
     },
-    { 
-      name: 'story', 
-      title: 'Our Story', 
-      type: 'array', 
-      of: [{ type: 'block' }],
+    {
+       name: 'founderImage',
+       title: 'Founder Photo',
+       type: 'image',
+       options: { hotspot: true }
+    },
+    {
+       name: 'founderBio',
+       title: 'Founder Bio',
+       type: 'array',
+       of: [{ type: 'block' }]
+    },
+    // --------------------------
+    {
+       name: 'story',
+       title: 'Where It All Began',
+       type: 'array',
+       of: [{ type: 'block' }],
       description: 'The narrative of how Psychology Embassy started.'
     },
-    { 
-      name: 'mission', 
-      title: 'Our Mission', 
-      type: 'text' 
-    },
-    { 
-      name: 'vision', 
-      title: 'Our Vision', 
-      type: 'text' 
-    },
+    {
+       name: 'mission',
+       title: 'Our Mission',
+       type: 'text'
+     },
+    {
+       name: 'vision',
+       title: 'Our Vision',
+       type: 'text'
+     },
     {
       name: 'coreValues',
       title: 'Core Values',

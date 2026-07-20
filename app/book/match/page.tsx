@@ -13,6 +13,7 @@ interface Counselor {
   name: string;
   email: string;
   designation: string;
+  speciality?: string; 
   experience: string;
   sessionsCompleted?: string;
   languages: string;
@@ -354,6 +355,11 @@ function MatchPageInner() {
                   <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#4F6F52]">
                     {c.designation}
                   </p>
+                  {c.speciality && (
+                    <span className="mt-2 inline-block rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
+                      {c.speciality}
+                    </span>
+                  )}
                   <p className="mt-3 text-xs leading-relaxed text-[#3A3A38]/70 line-clamp-4">{c.bio}</p>
                   {matchReasoning[c._id] && (
                     <p className="mt-3 rounded-lg bg-[#F6D86B]/15 px-3 py-2 text-[11px] italic text-[#8E7A65]">

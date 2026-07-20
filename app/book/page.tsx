@@ -13,6 +13,7 @@ interface Counselor {
   name: string;
   email: string;
   designation: string;
+  speciality?: string; 
   experience: string;
   sessionsCompleted?: string;
   languages: string;
@@ -191,9 +192,14 @@ export default function BookPage() {
                               {c.experience} Yrs Exp
                             </span>
                           )}
-                        <span className="flex items-center rounded-md bg-[#F6D86B]/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#8E7A65]">
-                          {c.sessionsCompleted} Sessions
-                        </span>
+                          <span className="flex items-center rounded-md bg-[#F6D86B]/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#8E7A65]">
+                            {c.sessionsCompleted} Sessions
+                          </span>
+                          {c.speciality && (
+                            <span className="flex items-center rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
+                              {c.speciality}
+                            </span>
+                          )}
                         </div>
                         <p className="mt-2 text-xs leading-relaxed text-[#3A3A38]/70 line-clamp-3">{c.bio}</p>
                         
