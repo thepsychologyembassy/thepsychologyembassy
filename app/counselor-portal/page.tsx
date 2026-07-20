@@ -52,17 +52,16 @@ export default function CounselorPortal() {
         return;
       }
       setCounselor(sanityCounselor);
-
+      console.log("DEBUG - Exact userEmail string:", userEmail);
       // 3. Fetch their Patients' Appointments
       const { data: apts, error } = await supabase
         .from("appointments")
-        .select("*")
-        .ilike("counselor_email", userEmail) // Changed to .ilike just in case!
-        .eq("status", "paid")
-        .order("appointment_date", { ascending: true });
-      console.log("DEBUG - Fetched Appointments:", apts);
+        .select("*");
+      console.log("DEBUG - Unfiltered Appointments:", apts);
       console.log("DEBUG - Supabase Error:", error);
-      if (!error && apts) setAppointments(apts);
+      // Put the filters back in memory just so the rest of the page doesn't crash
+      const filteredApts = apts?.filter(a => a.status === 'paid' && a.counselor_email?.toLowerCase() === userEmail) || [];
+      if (!error) setAppointments(filteredApts);
 
       // 4. Fetch this counselor's currently blocked slots
       try {
