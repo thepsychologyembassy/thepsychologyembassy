@@ -137,13 +137,13 @@ export default function BlogsPage() {
         </div>
 
         <div className="hero-text relative z-10 flex h-full flex-col items-center justify-center px-6 text-center pt-20">
-          <p className="mb-4 text-sm font-bold uppercase tracking-[0.35em] text-black drop-shadow-md">
+          <p className="mb-4 text-sm uppercase tracking-[0.35em] text-black drop-shadow-md">
             Gain Perspective
           </p>
-          <h1 className="max-w-4xl font-serif text-4xl font-bold leading-tight text-black drop-shadow-lg sm:text-6xl">
+          <h1 className="max-w-4xl font-serif text-4xl font-medium leading-tight text-black drop-shadow-lg sm:text-6xl">
             A Higher Vantage Point
           </h1>
-          <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-black drop-shadow-md">
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-black drop-shadow-md">
             Insights, reflections, and psychology-backed guidance. Take a breath, look at the bigger picture, and find clarity for your journey.
           </p>
         </div>
@@ -177,19 +177,19 @@ export default function BlogsPage() {
                     </span>
                     {/* HIDE DATE IF COMING SOON */}
                     {!post.isComingSoon && (
-                      <span className="text-xs font-medium uppercase tracking-widest text-[#3A3A38]/60">
+                      <span className="text-xs font-medium uppercase tracking-widest text-black/60">
                         {formatDate(post.publishedAt)}
                       </span>
                     )}
                   </div>
                   
-                  <h3 className={`font-serif text-2xl font-bold leading-snug ${post.isComingSoon ? "text-black/70 mt-4 mb-0" : "text-black mb-4 transition-colors group-hover:text-[#4F6F52]"}`}>
+                  <h3 className={`font-serif text-2xl font-medium leading-snug ${post.isComingSoon ? "text-black/70 mt-4 mb-0" : "text-black mb-4 transition-colors group-hover:text-[#4F6F52]"}`}>
                     {post.title}
                   </h3>
                   
                   {/* HIDE EXCERPT IF COMING SOON */}
                   {!post.isComingSoon && (
-                    <p className="mb-8 flex-grow text-sm font-medium leading-relaxed text-[#3A3A38]/80">
+                    <p className="mb-8 flex-grow text-sm leading-relaxed text-[#3A3A38]/70">
                       {post.excerpt}
                     </p>
                   )}
