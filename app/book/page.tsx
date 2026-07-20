@@ -224,7 +224,7 @@ export default function BookPage() {
           <div className="border-b border-[#88B7B5]/20 bg-[#88B7B5]/10 px-8 py-8 sm:px-12">
             <h2 className="font-serif text-2xl font-medium text-[#2C4C5B]">Ready to Begin?</h2>
             <p className="mt-2 text-sm text-[#3A3A38]/70">
-              We&apos;ll ask a few short questions and match you with the 3 psychologists best suited to help — including at least one Clinical Psychologist.
+              We&apos;We will ask you a few questions to understand your needs and match you with the right counselor.
             </p>
           </div>
 

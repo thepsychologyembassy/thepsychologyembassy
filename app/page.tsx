@@ -54,7 +54,7 @@ export default function Home() {
     {
       num: "2",
       title: "Training as a psychologist",
-      desc: "Structured, supervised skill-building for psychology students and early-career practitioners — no unpaid internships, ever.",
+      desc: "Structured, supervised skill-building for psychology students and early-career practitioners no unpaid internships, ever.",
       linkText: "Explore programs →",
       href: "/programs"
     },
