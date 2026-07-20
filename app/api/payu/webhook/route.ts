@@ -49,6 +49,14 @@ export async function POST(request: Request) {
       // 3. SEND EMAILS IF IT IS AN APPOINTMENT AND WE'RE THE ONE PAYING IT
       if (targetTable === "appointments" && preUpdateAppointment && !alreadyPaid) {
         await sendAppointmentConfirmationEmails(preUpdateAppointment as any);
+
+        // Close the loop on the intake session this booking came from, if any.
+        if (preUpdateAppointment.intake_session_id) {
+          await supabaseAdmin
+            .from("intake_sessions")
+            .update({ status: "converted", updated_at: new Date().toISOString() })
+            .eq("id", preUpdateAppointment.intake_session_id);
+        }
       }
     }
 

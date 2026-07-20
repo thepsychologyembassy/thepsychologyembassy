@@ -46,6 +46,14 @@ export async function POST(req: Request) {
         }).eq("id", udf1);
 
         await sendAppointmentConfirmationEmails(existingRecord as any);
+
+        // Close the loop on the intake session this booking came from, if any.
+        if (existingRecord.intake_session_id) {
+          await supabaseAdmin
+            .from("intake_sessions")
+            .update({ status: "converted", updated_at: new Date().toISOString() })
+            .eq("id", existingRecord.intake_session_id);
+        }
       }
 
       return NextResponse.redirect(`${url.origin}/dashboard?payment=success`, 303);
@@ -54,7 +62,7 @@ export async function POST(req: Request) {
       // CRITICAL FIX: Check if the webhook already marked it as paid before deleting
       const { data: existingApp } = await supabaseAdmin
         .from("appointments")
-        .select("status")
+        .select("status, intake_session_id")
         .eq("id", udf1)
         .single();
 
@@ -62,7 +70,15 @@ export async function POST(req: Request) {
       if (existingApp && existingApp.status !== "paid") {
         await supabaseAdmin.from("appointments").delete().eq("id", udf1);
       }
-      
+
+      // Send them back to their top-3 match page (selection still intact),
+      // not the whole intake form, so they can just pick a new time and retry.
+      if (existingApp?.intake_session_id) {
+        return NextResponse.redirect(
+          `${url.origin}/book/match?session=${existingApp.intake_session_id}&payment=cancelled`,
+          303
+        );
+      }
       return NextResponse.redirect(`${url.origin}/book?payment=cancelled`, 303);
     }
   } catch (error) {
