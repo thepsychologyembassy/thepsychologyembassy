@@ -172,31 +172,43 @@ function MatchPageInner() {
   // Double-booking prevention sync (same as the old booking form), plus
   // slots the counselor has manually blocked off.
   useEffect(() => {
-    const fetchBookedSlots = async () => {
-      if (!selectedCounselorId || !selectedDate) {
-        setBookedSlots([]);
-        return;
-      }
-      const [{ data: apts }, { data: blocked }] = await Promise.all([
-        supabase
-          .from("appointments")
-          .select("time_slots")
-          .eq("counselor_id", selectedCounselorId)
-          .eq("appointment_date", selectedDate)
-          .in("status", ["paid", "pending"]),
-        supabase
-          .from("blocked_slots")
-          .select("hour")
-          .eq("counselor_id", selectedCounselorId)
-          .eq("slot_date", selectedDate),
-      ]);
+  const fetchBookedSlots = async () => {
+    if (!selectedCounselorId || !selectedDate) {
+      setBookedSlots([]);
+      return;
+    }
 
-      const bookedHours = apts ? apts.flatMap((apt: any) => apt.time_slots) : [];
-      const blockedHours = blocked ? blocked.map((b: any) => b.hour) : [];
-      setBookedSlots([...new Set([...bookedHours, ...blockedHours])]);
-    };
-    fetchBookedSlots();
-  }, [selectedCounselorId, selectedDate]);
+    const [
+      { data: rpcData, error: rpcError }, 
+      { data: blocked }
+    ] = await Promise.all([
+      // 1. Fetch patient bookings securely via RPC
+      supabase.rpc("get_counselor_booked_slots", {
+        p_counselor_id: selectedCounselorId,
+        p_appointment_date: selectedDate,
+      }),
+      // 2. Fetch counselor's manual blocks
+      supabase
+        .from("blocked_slots")
+        .select("hour")
+        .eq("counselor_id", selectedCounselorId)
+        .eq("slot_date", selectedDate),
+    ]);
+
+    if (rpcError) {
+      console.error("Failed to fetch availability:", rpcError);
+    }
+
+    // Extract the flat hours from both sources
+    const bookedHours = rpcData ? rpcData.map((row: any) => row.booked_hour) : [];
+    const blockedHours = blocked ? blocked.map((b: any) => b.hour) : [];
+
+    // Merge and deduplicate
+    setBookedSlots([...new Set([...bookedHours, ...blockedHours])]);
+  };
+
+  fetchBookedSlots();
+}, [selectedCounselorId, selectedDate]);
 
   const selectedCounselor = matchedCounselors.find((c) => c._id === selectedCounselorId);
   const totalPrice = selectedCounselor ? selectedCounselor.fees * selectedSlots.length : 0;
