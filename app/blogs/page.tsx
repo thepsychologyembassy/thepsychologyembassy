@@ -1,5 +1,4 @@
 "use client";
-
 import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
@@ -17,7 +16,7 @@ interface BlogPost {
   slug: { current: string };
   publishedAt: string;
   excerpt: string;
-  isComingSoon?: boolean; // NEW FIELD
+  isComingSoon?: boolean;
 }
 
 const TAG_STYLES = [
@@ -30,7 +29,7 @@ const TAG_STYLES = [
 export default function BlogsPage() {
   const heroRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<(HTMLAnchorElement | null)[]>([]);
-  
+
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [ratings, setRatings] = useState<Record<string, { average: number; count: number }>>({});
@@ -52,6 +51,7 @@ export default function BlogsPage() {
             grouped[row.blog_id].sum += row.rating;
             grouped[row.blog_id].count += 1;
           });
+
           const averages: Record<string, { average: number; count: number }> = {};
           Object.entries(grouped).forEach(([blogId, { sum, count }]) => {
             averages[blogId] = { average: sum / count, count };
@@ -69,6 +69,7 @@ export default function BlogsPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const ctx = gsap.context(() => {
       gsap.to(".hero-text", {
         opacity: 0,
@@ -82,11 +83,13 @@ export default function BlogsPage() {
         },
       });
     });
+
     return () => ctx.revert();
   }, []);
 
   useEffect(() => {
     if (blogs.length === 0) return;
+
     const ctx = gsap.context(() => {
       cardsRef.current.forEach((card, i) => {
         if (!card) return;
@@ -104,8 +107,9 @@ export default function BlogsPage() {
         });
       });
     });
+
     return () => ctx.revert();
-  }, [blogs]); 
+  }, [blogs]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Recent";
@@ -122,7 +126,7 @@ export default function BlogsPage() {
       <section ref={heroRef} className="relative h-[80vh] w-full overflow-hidden">
         <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
           <video
-            className="h-full w-full object-cover opacity-80"
+            className="h-full w-full object-cover"
             autoPlay
             muted
             loop
@@ -133,13 +137,13 @@ export default function BlogsPage() {
         </div>
 
         <div className="hero-text relative z-10 flex h-full flex-col items-center justify-center px-6 text-center pt-20">
-          <p className="mb-4 text-sm uppercase tracking-[0.35em] text-[#4F6F52] drop-shadow-sm">
+          <p className="mb-4 text-sm font-bold uppercase tracking-[0.35em] text-black drop-shadow-md">
             Gain Perspective
           </p>
-          <h1 className="max-w-4xl font-serif text-4xl font-medium leading-tight text-[#3A3A38] sm:text-6xl">
+          <h1 className="max-w-4xl font-serif text-4xl font-bold leading-tight text-black drop-shadow-lg sm:text-6xl">
             A Higher Vantage Point
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-[#3A3A38]/70">
+          <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-black drop-shadow-md">
             Insights, reflections, and psychology-backed guidance. Take a breath, look at the bigger picture, and find clarity for your journey.
           </p>
         </div>
@@ -173,19 +177,19 @@ export default function BlogsPage() {
                     </span>
                     {/* HIDE DATE IF COMING SOON */}
                     {!post.isComingSoon && (
-                      <span className="text-xs font-medium uppercase tracking-widest text-[#3A3A38]/40">
+                      <span className="text-xs font-medium uppercase tracking-widest text-[#3A3A38]/60">
                         {formatDate(post.publishedAt)}
                       </span>
                     )}
                   </div>
                   
-                  <h3 className={`font-serif text-2xl font-medium leading-snug ${post.isComingSoon ? "text-[#3A3A38]/70 mt-4 mb-0" : "text-[#3A3A38] mb-4 transition-colors group-hover:text-[#4F6F52]"}`}>
+                  <h3 className={`font-serif text-2xl font-bold leading-snug ${post.isComingSoon ? "text-black/70 mt-4 mb-0" : "text-black mb-4 transition-colors group-hover:text-[#4F6F52]"}`}>
                     {post.title}
                   </h3>
                   
                   {/* HIDE EXCERPT IF COMING SOON */}
                   {!post.isComingSoon && (
-                    <p className="mb-8 flex-grow text-sm leading-relaxed text-[#3A3A38]/70">
+                    <p className="mb-8 flex-grow text-sm font-medium leading-relaxed text-[#3A3A38]/80">
                       {post.excerpt}
                     </p>
                   )}
@@ -196,7 +200,7 @@ export default function BlogsPage() {
                         <span className="text-xs font-medium uppercase tracking-widest text-[#3A3A38]/50">
                           Status
                         </span>
-                        <span className="text-sm font-medium text-[#3A3A38]/40">
+                        <span className="text-sm font-medium text-[#3A3A38]/50">
                           Coming Soon
                         </span>
                       </>
