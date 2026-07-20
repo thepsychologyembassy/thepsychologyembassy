@@ -10,16 +10,16 @@ import { client, urlFor } from "../../lib/sanity";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 1. Styles for the Founder bio (Left aligned, smaller font, original colors)
+// 1. Styles for the Founder bio (Smaller font, original black color, normal weight)
 const founderTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
-      <p className="mb-4 text-sm leading-relaxed text-[#3A3A38]/80 font-normal">
+      <p className="mb-4 text-sm font-normal leading-relaxed text-[#3A3A38]/80">
         {children}
       </p>
     ),
     h2: ({ children }: any) => (
-      <h2 className="mb-6 font-serif text-xl font-medium text-[#2C4C5B]">
+      <h2 className="mb-6 font-serif text-xl font-medium text-[#3A3A38]">
         {children}
       </h2>
     ),
@@ -27,21 +27,21 @@ const founderTextStyles: any = {
   marks: {
     em: ({ children }: any) => <em className="italic">{children}</em>,
     strong: ({ children }: any) => (
-      <strong className="font-semibold text-[#A65D47]">{children}</strong>
+      <strong className="font-medium text-[#A65D47]">{children}</strong>
     ),
   },
 };
 
-// 2. Styles for "Where It All Began" (Centered, smaller font, original colors)
+// 2. Styles for "Where It All Began" (Centered, smaller font, original black color, normal weight)
 const storyTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
-      <p className="story-paragraph mb-4 text-sm leading-relaxed text-[#3A3A38]/80 font-normal text-center">
+      <p className="story-paragraph mb-4 text-center text-sm font-normal leading-relaxed text-[#3A3A38]/80">
         {children}
       </p>
     ),
     h2: ({ children }: any) => (
-      <h2 className="story-paragraph mb-6 font-serif text-xl font-medium text-[#2C4C5B] text-center">
+      <h2 className="story-paragraph mb-6 text-center font-serif text-xl font-medium text-[#3A3A38]">
         {children}
       </h2>
     ),
@@ -49,7 +49,7 @@ const storyTextStyles: any = {
   marks: {
     em: ({ children }: any) => <em className="italic">{children}</em>,
     strong: ({ children }: any) => (
-      <strong className="font-semibold text-[#A65D47]">{children}</strong>
+      <strong className="font-medium text-[#A65D47]">{children}</strong>
     ),
   },
 };
@@ -146,7 +146,7 @@ export default function AboutPage() {
 
       {/* 1. HERO & ISO TAG */}
       <section ref={heroRef} className="relative flex h-[70vh] w-full flex-col items-center justify-center sm:h-[80vh]">
-        {/* Left Aligned ISO Certified Link - Single line, no background, unbolded */}
+        {/* Left Aligned ISO Certified Link - Single line, NO background, unbolded */}
         <div className="absolute left-6 top-32 z-20 sm:left-12">
           <Link href="#" className="text-[10px] font-normal uppercase tracking-widest text-[#3A3A38] transition-colors hover:text-[#A65D47] sm:text-xs">
             ISO Certified Government Registered Organization
@@ -166,9 +166,10 @@ export default function AboutPage() {
       {/* 2. MEET OUR FOUNDER */}
       {aboutData?.founderName && (
         <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
-          <div className="flex flex-col items-center gap-10 rounded-3xl border border-[#3A3A38]/5 bg-white/5 p-8 shadow-sm backdrop-blur-md md:flex-row sm:p-12">
+          <h2 className="mb-10 text-center font-serif text-3xl font-medium text-[#3A3A38]">Meet Our Founder</h2>
+          <div className="flex flex-col items-center gap-10 rounded-3xl border border-[#3A3A38]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
             <div className="w-full md:w-1/3">
-              <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl shadow-sm border border-[#3A3A38]/10">
+              <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl border border-[#3A3A38]/10 shadow-sm">
                 {aboutData.founderImage ? (
                   <Image
                     src={urlFor(aboutData.founderImage).url()}
@@ -177,14 +178,13 @@ export default function AboutPage() {
                     className="object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#2C4C5B]/10 text-[#2C4C5B]">
+                  <div className="flex h-full w-full items-center justify-center bg-[#3A3A38]/5 text-[#3A3A38]/50">
                     Image Required
                   </div>
                 )}
               </div>
             </div>
             <div className="w-full md:w-2/3">
-              <h2 className="mb-2 font-serif text-3xl font-medium text-[#2C4C5B]">Meet Our Founder</h2>
               <h3 className="mb-6 text-xs font-semibold uppercase tracking-widest text-[#A65D47]">
                 {aboutData.founderName}
               </h3>
@@ -192,7 +192,7 @@ export default function AboutPage() {
                 {aboutData.founderBio ? (
                   <PortableText value={aboutData.founderBio} components={founderTextStyles} />
                 ) : (
-                  <p className="text-sm text-[#3A3A38]/70">Bio coming soon.</p>
+                  <p className="text-sm font-normal text-[#3A3A38]/70">Bio coming soon.</p>
                 )}
               </div>
             </div>
@@ -202,8 +202,8 @@ export default function AboutPage() {
 
       {/* 3. WHERE IT ALL BEGAN */}
       <section ref={storyRef} className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
-        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-[#3A3A38]/5 bg-white/5 p-8 shadow-sm backdrop-blur-md sm:p-12">
-          <h2 className="mb-4 font-serif text-3xl font-medium text-[#2C4C5B]">Where It All Began</h2>
+        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-[#3A3A38]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm sm:p-12">
+          <h2 className="mb-4 font-serif text-3xl font-medium text-[#3A3A38]">Where It All Began</h2>
           {isLoading ? (
             <p className="animate-pulse text-xs font-semibold uppercase tracking-widest text-[#A65D47]">Loading Story...</p>
           ) : aboutData?.story ? (
@@ -211,7 +211,7 @@ export default function AboutPage() {
               <PortableText value={aboutData?.story} components={storyTextStyles} />
             </div>
           ) : (
-            <p className="italic text-sm text-[#3A3A38]/50">Story content coming soon.</p>
+            <p className="text-sm italic text-[#3A3A38]/50">Story content coming soon.</p>
           )}
         </div>
       </section>
@@ -219,14 +219,14 @@ export default function AboutPage() {
       {/* 4. MISSION & VISION */}
       <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="flex flex-col items-center text-center rounded-3xl border border-[#3A3A38]/5 bg-white/5 p-8 shadow-sm backdrop-blur-md transition-transform hover:-translate-y-1">
-            <h3 className="mb-3 font-serif text-2xl font-medium text-[#2C4C5B]">Our Mission</h3>
+          <div className="flex flex-col items-center rounded-3xl border border-[#3A3A38]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
+            <h3 className="mb-3 font-serif text-2xl font-medium text-[#3A3A38]">Our Mission</h3>
             <p className="text-sm font-normal leading-relaxed text-[#3A3A38]/80">
               {aboutData?.mission || "Mission statement coming soon."}
             </p>
           </div>
-          <div className="flex flex-col items-center text-center rounded-3xl border border-[#3A3A38]/5 bg-white/5 p-8 shadow-sm backdrop-blur-md transition-transform hover:-translate-y-1">
-            <h3 className="mb-3 font-serif text-2xl font-medium text-[#2C4C5B]">Our Vision</h3>
+          <div className="flex flex-col items-center rounded-3xl border border-[#3A3A38]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
+            <h3 className="mb-3 font-serif text-2xl font-medium text-[#3A3A38]">Our Vision</h3>
             <p className="text-sm font-normal leading-relaxed text-[#3A3A38]/80">
               {aboutData?.vision || "Vision statement coming soon."}
             </p>
@@ -247,9 +247,10 @@ export default function AboutPage() {
               <div
                 key={pillar._key || i}
                 ref={(el) => { cardsRef.current[i] = el; }}
-                className="flex flex-col items-center text-center rounded-3xl border border-[#3A3A38]/5 bg-white/5 p-8 shadow-sm backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:bg-white/10"
+                className="flex flex-col items-center rounded-3xl border border-[#3A3A38]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:bg-white/10"
               >
-                <h3 className="mb-3 font-serif text-lg font-semibold text-[#3A3A38]">
+                {/* Heading explicitly set to not be bold (font-medium instead of font-bold) */}
+                <h3 className="mb-3 font-serif text-lg font-medium text-[#3A3A38]">
                   {pillar.title}
                 </h3>
                 <p className="text-sm font-normal leading-relaxed text-[#3A3A38]/80">
