@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import Navbar from "../../components/Navbar";
@@ -18,6 +18,25 @@ export default function DashboardPage() {
   // NEW: Custom Modal States
   const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Homework submission upload state
+  const [submittingAptId, setSubmittingAptId] = useState<string | null>(null);
+  const [pendingSubmissionFiles, setPendingSubmissionFiles] = useState<File[]>([]);
+  const [submissionFileError, setSubmissionFileError] = useState("");
+  const [isUploadingSubmission, setIsUploadingSubmission] = useState(false);
+
+  // Post-session feedback + "continue with this psychologist?" state
+  const [feedbackByAptId, setFeedbackByAptId] = useState<Record<string, any>>({});
+  const [activeFeedbackAptId, setActiveFeedbackAptId] = useState<string | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [continuePromptAptId, setContinuePromptAptId] = useState<string | null>(null);
+
+  const authHeader = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { Authorization: `Bearer ${session?.access_token}` };
+  };
 
   useEffect(() => {
     // Update the clock every minute so the 15-minute button activation is live
@@ -47,6 +66,37 @@ export default function DashboardPage() {
 
       if (!error && data) {
         setAppointments(data);
+
+        // Pull any feedback already left for past sessions, so we don't
+        // show the feedback form again once it's been submitted.
+        const now = new Date();
+        const pastApts = data.filter((apt: any) => {
+          const endHour = Math.max(...(apt.time_slots || [0])) + 1;
+          const end = new Date(apt.appointment_date);
+          end.setHours(endHour, 0, 0, 0);
+          return now >= end;
+        });
+
+        if (pastApts.length > 0) {
+          try {
+            const headers = await authHeader();
+            const results = await Promise.all(
+              pastApts.map((apt: any) =>
+                fetch(`/api/feedback?appointmentId=${apt.id}`, { headers })
+                  .then((r) => (r.ok ? r.json() : { feedback: null }))
+                  .then((r) => [apt.id, r.feedback])
+                  .catch(() => [apt.id, null])
+              )
+            );
+            const map: Record<string, any> = {};
+            results.forEach(([id, fb]) => {
+              if (fb) map[id as string] = fb;
+            });
+            setFeedbackByAptId(map);
+          } catch (err) {
+            console.error("Failed to load feedback:", err);
+          }
+        }
       }
       setIsLoading(false);
     };
@@ -108,6 +158,125 @@ export default function DashboardPage() {
     return `${format(startHour)} - ${format(endHour)}`;
   };
 
+  const handleSubmissionFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const chosen = Array.from(e.target.files || []);
+    setSubmissionFileError("");
+    if (chosen.length > 2) {
+      setSubmissionFileError("You can upload at most 2 files.");
+      return;
+    }
+    const tooBig = chosen.find((f) => f.size > 5 * 1024 * 1024);
+    if (tooBig) {
+      setSubmissionFileError(`"${tooBig.name}" is over 5MB. Please choose a smaller file.`);
+      return;
+    }
+    setPendingSubmissionFiles(chosen);
+  };
+
+  const uploadHomeworkSubmission = async (aptId: string) => {
+    if (pendingSubmissionFiles.length === 0) {
+      setSubmissionFileError("Please choose at least one file.");
+      return;
+    }
+    setIsUploadingSubmission(true);
+    try {
+      const headers = await authHeader();
+      const formData = new FormData();
+      formData.append("appointmentId", aptId);
+      pendingSubmissionFiles.forEach((f) => formData.append("files", f));
+
+      const res = await fetch("/api/homework/submit", { method: "POST", headers, body: formData });
+      const result = await res.json();
+
+      if (res.ok) {
+        setAppointments((prev) =>
+          prev.map((apt) => (apt.id === aptId ? { ...apt, homework_submission_files: result.homework_submission_files } : apt))
+        );
+        setSubmittingAptId(null);
+        setPendingSubmissionFiles([]);
+      } else {
+        setSubmissionFileError(result.error || "Failed to upload. Please try again.");
+      }
+    } catch (err) {
+      setSubmissionFileError("A network error occurred. Please try again.");
+    } finally {
+      setIsUploadingSubmission(false);
+    }
+  };
+
+  const submitFeedback = async (apt: any) => {
+    if (feedbackRating < 1) {
+      alert("Please select a star rating.");
+      return;
+    }
+    setIsSubmittingFeedback(true);
+    try {
+      const headers = await authHeader();
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appointmentId: apt.id,
+          rating: feedbackRating,
+          feedbackText,
+          // wantsToContinue is answered in the follow-up prompt; default to
+          // true here and let the follow-up buttons correct/route it.
+          wantsToContinue: true,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setFeedbackByAptId((prev) => ({ ...prev, [apt.id]: result.feedback }));
+        setActiveFeedbackAptId(null);
+        setFeedbackRating(0);
+        setFeedbackText("");
+        setContinuePromptAptId(apt.id); // show the Yes/No follow-up
+      } else {
+        alert(result.error || "Failed to submit feedback.");
+      }
+    } catch (err) {
+      alert("A network error occurred. Please try again.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  const recordContinuePreference = async (apt: any, wantsToContinue: boolean) => {
+    // Patch the feedback row with their actual answer.
+    try {
+      const headers = await authHeader();
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appointmentId: apt.id,
+          rating: feedbackByAptId[apt.id]?.rating || 5,
+          feedbackText: feedbackByAptId[apt.id]?.feedback_text || "",
+          wantsToContinue,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to record continue preference:", err);
+    }
+
+    if (wantsToContinue) {
+      router.push(`/book/match?counselor=${apt.counselor_id}&rebook=1`);
+    } else if (apt.intake_session_id) {
+      router.push(`/book/match?session=${apt.intake_session_id}&reselect=1`);
+    } else {
+      router.push("/book/intake");
+    }
+  };
+
+  // For the "Book a Session" shortcut on the most recent session.
+  const latestAppointment = appointments.length
+    ? [...appointments].sort((a, b) => {
+        const aEnd = new Date(a.appointment_date).getTime() + Math.max(...(a.time_slots || [0]));
+        const bEnd = new Date(b.appointment_date).getTime() + Math.max(...(b.time_slots || [0]));
+        return bEnd - aEnd;
+      })[0]
+    : null;
+
   return (
     <main className="min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
       <Navbar />
@@ -119,9 +288,19 @@ export default function DashboardPage() {
             <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#88B7B5]">Patient Portal</p>
             <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">My Appointments</h1>
           </div>
-          <button onClick={handleLogout} className="rounded-full border border-[#A65D47]/30 px-6 py-2 text-xs font-semibold uppercase tracking-widest text-[#A65D47] transition-colors hover:bg-[#A65D47]/5">
-            Log Out
-          </button>
+          <div className="flex items-center gap-3">
+            {latestAppointment && (
+              <button
+                onClick={() => router.push(`/book/match?counselor=${latestAppointment.counselor_id}&rebook=1`)}
+                className="rounded-full bg-[#4F6F52] px-6 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                Book a Session
+              </button>
+            )}
+            <button onClick={handleLogout} className="rounded-full border border-[#A65D47]/30 px-6 py-2 text-xs font-semibold uppercase tracking-widest text-[#A65D47] transition-colors hover:bg-[#A65D47]/5">
+              Log Out
+            </button>
+          </div>
         </div>
 
         {/* Appointments List */}
@@ -180,13 +359,170 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Post-Session Homework Block */}
-                    {apt.homework && (
+                    {(apt.homework || apt.homework_files?.length > 0) && (
                       <div className="mt-6 rounded-2xl bg-[#88B7B5]/10 p-5 border border-[#88B7B5]/20 max-w-xl">
                         <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#2C4C5B] flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                           Post-Session Tasks
                         </p>
-                        <p className="text-sm text-[#3A3A38]/80 whitespace-pre-wrap leading-relaxed">{apt.homework}</p>
+                        {apt.homework && (
+                          <p className="text-sm text-[#3A3A38]/80 whitespace-pre-wrap leading-relaxed">{apt.homework}</p>
+                        )}
+
+                        {apt.homework_files?.length > 0 && (
+                          <div className="mt-3 flex flex-col gap-1">
+                            {apt.homework_files.map((f: any) => (
+                              <a
+                                key={f.path}
+                                href={f.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-semibold text-[#2C4C5B] underline underline-offset-2"
+                              >
+                                📎 Download {f.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Homework Submission (patient uploads their completed work) */}
+                        {apt.homework && (
+                          <div className="mt-4 pt-4 border-t border-[#88B7B5]/30">
+                            {apt.homework_submission_files?.length > 0 ? (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-widest text-[#4F6F52] font-semibold mb-1">Your submission:</p>
+                                <div className="flex flex-col gap-1">
+                                  {apt.homework_submission_files.map((f: any) => (
+                                    <a
+                                      key={f.path}
+                                      href={f.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs font-semibold text-[#4F6F52] underline underline-offset-2"
+                                    >
+                                      📎 {f.name}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : submittingAptId === apt.id ? (
+                              <div className="flex flex-col gap-2">
+                                <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">
+                                  Upload up to 2 files (max 5MB each)
+                                </label>
+                                <input
+                                  type="file"
+                                  multiple
+                                  onChange={handleSubmissionFileSelect}
+                                  className="w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#4F6F52]/10 file:px-3 file:py-2 file:text-[#4F6F52] file:text-xs file:font-semibold"
+                                />
+                                {pendingSubmissionFiles.length > 0 && (
+                                  <p className="text-[10px] text-[#3A3A38]/60">{pendingSubmissionFiles.map((f) => f.name).join(", ")}</p>
+                                )}
+                                {submissionFileError && <p className="text-[10px] text-[#A65D47] font-semibold">{submissionFileError}</p>}
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => uploadHomeworkSubmission(apt.id)}
+                                    disabled={isUploadingSubmission}
+                                    className="flex-1 bg-[#4F6F52] text-white py-2 rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-[#3A533D]"
+                                  >
+                                    {isUploadingSubmission ? "Uploading..." : "Upload"}
+                                  </button>
+                                  <button
+                                    onClick={() => { setSubmittingAptId(null); setPendingSubmissionFiles([]); setSubmissionFileError(""); }}
+                                    className="flex-1 bg-white border border-[#3A3A38]/20 text-[#3A3A38] py-2 rounded-lg text-xs font-semibold uppercase tracking-wider"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setSubmittingAptId(apt.id)}
+                                className="text-xs font-semibold uppercase tracking-widest text-[#4F6F52] hover:underline"
+                              >
+                                + Submit Your Homework
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Post-Session Feedback */}
+                    {isPast && (
+                      <div className="mt-6 max-w-xl">
+                        {continuePromptAptId === apt.id ? (
+                          <div className="rounded-2xl bg-[#F6D86B]/15 p-5 border border-[#F6D86B]/30">
+                            <p className="text-sm font-medium text-[#2C4C5B] mb-3">
+                              Thanks for your feedback! Would you like to continue with {apt.counselor_name}?
+                            </p>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => recordContinuePreference(apt, true)}
+                                className="flex-1 bg-[#4F6F52] text-white py-2 rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-[#3A533D]"
+                              >
+                                Yes, book again
+                              </button>
+                              <button
+                                onClick={() => recordContinuePreference(apt, false)}
+                                className="flex-1 bg-white border border-[#3A3A38]/20 text-[#3A3A38] py-2 rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-gray-50"
+                              >
+                                No, show me others
+                              </button>
+                            </div>
+                          </div>
+                        ) : feedbackByAptId[apt.id] ? (
+                          <div className="rounded-2xl bg-white p-5 border border-[#3A3A38]/10 text-sm text-[#3A3A38]/70">
+                            <p className="font-semibold text-[#2C4C5B] mb-1">Feedback submitted — thank you!</p>
+                            <p>{"★".repeat(feedbackByAptId[apt.id].rating)}{"☆".repeat(5 - feedbackByAptId[apt.id].rating)}</p>
+                          </div>
+                        ) : activeFeedbackAptId === apt.id ? (
+                          <div className="rounded-2xl bg-white p-5 border border-[#3A3A38]/10">
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#2C4C5B] mb-3">Rate Your Session</p>
+                            <div className="flex gap-1 mb-3">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  onClick={() => setFeedbackRating(star)}
+                                  className={`text-2xl leading-none ${star <= feedbackRating ? "text-[#F6D86B]" : "text-[#3A3A38]/20"}`}
+                                  aria-label={`${star} star`}
+                                >
+                                  ★
+                                </button>
+                              ))}
+                            </div>
+                            <textarea
+                              rows={3}
+                              placeholder="How did the session go?"
+                              value={feedbackText}
+                              onChange={(e) => setFeedbackText(e.target.value)}
+                              className="w-full text-sm p-3 rounded-xl border border-[#3A3A38]/20 focus:outline-none focus:ring-1 focus:ring-[#4F6F52]"
+                            />
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={() => submitFeedback(apt)}
+                                disabled={isSubmittingFeedback}
+                                className="flex-1 bg-[#4F6F52] text-white py-2 rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-[#3A533D]"
+                              >
+                                {isSubmittingFeedback ? "Submitting..." : "Submit Feedback"}
+                              </button>
+                              <button
+                                onClick={() => { setActiveFeedbackAptId(null); setFeedbackRating(0); setFeedbackText(""); }}
+                                className="flex-1 bg-white border border-[#3A3A38]/20 text-[#3A3A38] py-2 rounded-lg text-xs font-semibold uppercase tracking-wider"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setActiveFeedbackAptId(apt.id)}
+                            className="text-xs font-semibold uppercase tracking-widest text-[#2C4C5B] hover:underline"
+                          >
+                            + Leave Feedback
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

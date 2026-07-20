@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { client } from "../../lib/sanity";
@@ -15,7 +15,18 @@ export default function CounselorPortal() {
   // Homework State
   const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
   const [homeworkText, setHomeworkText] = useState("");
+  const [homeworkFiles, setHomeworkFiles] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [fileErrorMsg, setFileErrorMsg] = useState("");
+
+  // Calendar blocking state: Set of "date|hour" keys currently blocked.
+  const [blockedSlotKeys, setBlockedSlotKeys] = useState<Set<string>>(new Set());
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
+
+  const authHeader = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { Authorization: `Bearer ${session?.access_token}` };
+  };
 
   useEffect(() => {
     const fetchCounselorData = async () => {
@@ -51,6 +62,19 @@ export default function CounselorPortal() {
         .order("appointment_date", { ascending: true });
 
       if (!error && apts) setAppointments(apts);
+
+      // 4. Fetch this counselor's currently blocked slots
+      try {
+        const headers = await authHeader();
+        const res = await fetch("/api/counselor/blocked-slots", { headers });
+        if (res.ok) {
+          const { blockedSlots } = await res.json();
+          setBlockedSlotKeys(new Set((blockedSlots || []).map((b: any) => `${b.slot_date}|${b.hour}`)));
+        }
+      } catch (err) {
+        console.error("Failed to load blocked slots:", err);
+      }
+
       setIsLoading(false);
     };
 
@@ -95,22 +119,83 @@ export default function CounselorPortal() {
     return days;
   };
 
+  const toggleSlotBlock = async (dateStr: string, hour: number, isCurrentlyBlocked: boolean) => {
+    const key = `${dateStr}|${hour}`;
+    setTogglingKey(key);
+    try {
+      const headers = await authHeader();
+      const res = await fetch("/api/counselor/blocked-slots", {
+        method: isCurrentlyBlocked ? "DELETE" : "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateStr, hour }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.error || "Failed to update slot.");
+        return;
+      }
+      setBlockedSlotKeys((prev) => {
+        const next = new Set(prev);
+        if (isCurrentlyBlocked) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    } catch (err) {
+      alert("A network error occurred. Please try again.");
+    } finally {
+      setTogglingKey(null);
+    }
+  };
+
+  const handleHomeworkFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const chosen = Array.from(e.target.files || []);
+    setFileErrorMsg("");
+    if (chosen.length > 2) {
+      setFileErrorMsg("You can attach at most 2 files.");
+      return;
+    }
+    const tooBig = chosen.find((f) => f.size > 5 * 1024 * 1024);
+    if (tooBig) {
+      setFileErrorMsg(`"${tooBig.name}" is over 5MB. Please choose a smaller file.`);
+      return;
+    }
+    setHomeworkFiles(chosen);
+  };
+
   const saveHomework = async (aptId: string) => {
     setIsSaving(true);
-    const { error } = await supabase
-      .from("appointments")
-      .update({ homework: homeworkText })
-      .eq("id", aptId);
+    setFileErrorMsg("");
+    try {
+      const headers = await authHeader();
+      const formData = new FormData();
+      formData.append("appointmentId", aptId);
+      formData.append("homework", homeworkText);
+      homeworkFiles.forEach((f) => formData.append("files", f));
 
-    if (!error) {
-      // Update local state to reflect change instantly
-      setAppointments(prev => prev.map(apt => apt.id === aptId ? { ...apt, homework: homeworkText } : apt));
-      setEditingHomeworkId(null);
-      setHomeworkText("");
-    } else {
-      alert("Failed to save homework. Please try again.");
+      const res = await fetch("/api/homework/assign", {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      const result = await res.json();
+
+      if (res.ok) {
+        setAppointments((prev) =>
+          prev.map((apt) =>
+            apt.id === aptId ? { ...apt, homework: homeworkText, homework_files: result.homework_files } : apt
+          )
+        );
+        setEditingHomeworkId(null);
+        setHomeworkText("");
+        setHomeworkFiles([]);
+      } else {
+        alert(result.error || "Failed to save homework. Please try again.");
+      }
+    } catch (err) {
+      alert("A network error occurred. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   return (
@@ -145,18 +230,31 @@ export default function CounselorPortal() {
                       ) : (
                         <>
                           <p className="text-xs uppercase tracking-widest text-[#3A3A38]/60 mb-4 border-b border-[#3A3A38]/10 pb-2">
-                            {availableSlots} slots open
+                            {availableSlots} slots open · tap a slot to block/unblock it
                           </p>
                           <div className="grid grid-cols-3 gap-2">
                             {Array.from({ length: totalSlots }, (_, i) => day.shiftStart + i).map(hour => {
                               const isBooked = day.bookedHours.includes(hour);
+                              const slotKey = `${day.date}|${hour}`;
+                              const isBlocked = blockedSlotKeys.has(slotKey);
+                              const isToggling = togglingKey === slotKey;
                               return (
-                                <div key={hour} className={`text-center py-2 rounded-lg text-[10px] font-semibold border ${
-                                  isBooked ? 'bg-[#A65D47]/10 text-[#A65D47] border-[#A65D47]/20 line-through' 
-                                  : 'bg-[#4F6F52]/10 text-[#4F6F52] border-[#4F6F52]/20'
-                                }`}>
+                                <button
+                                  key={hour}
+                                  type="button"
+                                  disabled={isBooked || isToggling}
+                                  onClick={() => toggleSlotBlock(day.date, hour, isBlocked)}
+                                  title={isBooked ? "Already booked" : isBlocked ? "Click to unblock" : "Click to block"}
+                                  className={`text-center py-2 rounded-lg text-[10px] font-semibold border transition ${
+                                    isBooked
+                                      ? 'bg-[#A65D47]/10 text-[#A65D47] border-[#A65D47]/20 line-through cursor-not-allowed'
+                                      : isBlocked
+                                      ? 'bg-[#3A3A38]/10 text-[#3A3A38]/50 border-[#3A3A38]/20 line-through cursor-pointer hover:bg-[#3A3A38]/15'
+                                      : 'bg-[#4F6F52]/10 text-[#4F6F52] border-[#4F6F52]/20 cursor-pointer hover:bg-[#4F6F52]/20'
+                                  } ${isToggling ? 'opacity-50' : ''}`}
+                                >
                                   {formatTime(hour)}
-                                </div>
+                                </button>
                               );
                             })}
                           </div>
@@ -225,6 +323,8 @@ export default function CounselorPortal() {
                                 onClick={() => {
                                   setEditingHomeworkId(apt.id);
                                   setHomeworkText(apt.homework || "");
+                                  setHomeworkFiles([]);
+                                  setFileErrorMsg("");
                                 }}
                                 className="text-[10px] uppercase tracking-widest text-[#4F6F52] hover:underline"
                               >
@@ -242,6 +342,25 @@ export default function CounselorPortal() {
                                 value={homeworkText}
                                 onChange={(e) => setHomeworkText(e.target.value)}
                               />
+                              <div>
+                                <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1 block">
+                                  Attach up to 2 files (max 5MB each)
+                                </label>
+                                <input
+                                  type="file"
+                                  multiple
+                                  onChange={handleHomeworkFileSelect}
+                                  className="w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#4F6F52]/10 file:px-3 file:py-2 file:text-[#4F6F52] file:text-xs file:font-semibold"
+                                />
+                                {homeworkFiles.length > 0 && (
+                                  <p className="mt-1 text-[10px] text-[#3A3A38]/60">
+                                    {homeworkFiles.map((f) => f.name).join(", ")}
+                                  </p>
+                                )}
+                                {fileErrorMsg && (
+                                  <p className="mt-1 text-[10px] text-[#A65D47] font-semibold">{fileErrorMsg}</p>
+                                )}
+                              </div>
                               <div className="flex gap-2">
                                 <button 
                                   onClick={() => saveHomework(apt.id)}
@@ -251,7 +370,7 @@ export default function CounselorPortal() {
                                   {isSaving ? "Saving..." : "Save"}
                                 </button>
                                 <button 
-                                  onClick={() => setEditingHomeworkId(null)}
+                                  onClick={() => { setEditingHomeworkId(null); setHomeworkFiles([]); setFileErrorMsg(""); }}
                                   className="flex-1 bg-white border border-[#3A3A38]/20 text-[#3A3A38] py-2 rounded-lg text-xs font-semibold uppercase tracking-wider"
                                 >
                                   Cancel
@@ -259,9 +378,44 @@ export default function CounselorPortal() {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-sm text-[#3A3A38]/80 whitespace-pre-wrap">
-                              {apt.homework || <span className="italic opacity-50">No homework assigned yet.</span>}
-                            </p>
+                            <div className="flex flex-col gap-3">
+                              <p className="text-sm text-[#3A3A38]/80 whitespace-pre-wrap">
+                                {apt.homework || <span className="italic opacity-50">No homework assigned yet.</span>}
+                              </p>
+                              {apt.homework_files?.length > 0 && (
+                                <div className="flex flex-col gap-1">
+                                  {apt.homework_files.map((f: any) => (
+                                    <a
+                                      key={f.path}
+                                      href={f.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs font-semibold text-[#2C4C5B] underline underline-offset-2"
+                                    >
+                                      📎 {f.name}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                              {apt.homework_submission_files?.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-[#88B7B5]/30">
+                                  <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1">Patient Submission:</p>
+                                  <div className="flex flex-col gap-1">
+                                    {apt.homework_submission_files.map((f: any) => (
+                                      <a
+                                        key={f.path}
+                                        href={f.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-semibold text-[#4F6F52] underline underline-offset-2"
+                                      >
+                                        📎 {f.name}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
 

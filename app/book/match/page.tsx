@@ -38,8 +38,18 @@ function MatchPageInner() {
   const sessionId = searchParams.get("session");
   const paymentFlag = searchParams.get("payment"); // 'cancelled' | 'error' | null
 
+  // "Continue with this psychologist?" flows (from post-session feedback,
+  // or the "Book a Session" shortcut on the dashboard). rebook=1 + counselor
+  // skips the intake/matching step entirely and jumps straight to
+  // scheduling with that one psychologist. reselect=1 re-opens an already
+  // "converted" intake session so its top-3 list can be picked from again.
+  const rebookCounselorId = searchParams.get("counselor");
+  const isRebook = searchParams.get("rebook") === "1" && !!rebookCounselorId;
+  const isReselect = searchParams.get("reselect") === "1";
+
   const [isResolving, setIsResolving] = useState(true);
   const [intakeSession, setIntakeSession] = useState<any>(null);
+  const [rebookUser, setRebookUser] = useState<any>(null);
   const [matchedCounselors, setMatchedCounselors] = useState<Counselor[]>([]);
   const [matchReasoning, setMatchReasoning] = useState<Record<string, string>>({});
 
@@ -65,16 +75,46 @@ function MatchPageInner() {
 
   useEffect(() => {
     const init = async () => {
-      if (!sessionId) {
-        router.push("/book/intake");
-        return;
-      }
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        router.push(`/login?redirect=/book/match?session=${sessionId}`);
+        const redirectTarget = isRebook
+          ? `/book/match?counselor=${rebookCounselorId}&rebook=1`
+          : `/book/match?session=${sessionId}`;
+        router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
+        return;
+      }
+
+      // ── Rebook: "continue with this psychologist" ──────────────────
+      // Skip intake/matching entirely. Fetch just that one counselor and
+      // go straight to the scheduler, using the logged-in user's own info.
+      if (isRebook) {
+        const counselor: Counselor | null = await client.fetch(
+          `*[_type == "counselor" && _id == $id][0]`,
+          { id: rebookCounselorId },
+          { cache: "no-store" }
+        );
+
+        if (!counselor) {
+          router.push("/book");
+          return;
+        }
+
+        setRebookUser(user);
+        setMatchedCounselors([counselor]);
+        setSelectedCounselorId(counselor._id);
+        setModality(counselor.mode === "in-person" ? "in-person" : "online");
+        setIsResolving(false);
+        setTimeout(() => {
+          document.getElementById("scheduler")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
+        return;
+      }
+
+      // ── Normal / reselect: resolve an intake session ────────────────
+      if (!sessionId) {
+        router.push("/book/intake");
         return;
       }
 
@@ -94,7 +134,10 @@ function MatchPageInner() {
         router.replace(`/book/intake?session=${sessionId}`);
         return;
       }
-      if (session.status === "converted") {
+      // A "converted" session normally means they already booked from it —
+      // send them to the dashboard, UNLESS they're here to reselect a
+      // different psychologist from their original top-3 after feedback.
+      if (session.status === "converted" && !isReselect) {
         router.replace("/dashboard");
         return;
       }
@@ -102,7 +145,7 @@ function MatchPageInner() {
       setIntakeSession(session);
       setMatchReasoning(session.match_reasoning || {});
 
-      if (session.selected_counselor_id) {
+      if (session.selected_counselor_id && !isReselect) {
         setSelectedCounselorId(session.selected_counselor_id);
       }
 
@@ -124,25 +167,33 @@ function MatchPageInner() {
 
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [sessionId, isRebook, rebookCounselorId, isReselect]);
 
-  // Double-booking prevention sync (same as the old booking form)
+  // Double-booking prevention sync (same as the old booking form), plus
+  // slots the counselor has manually blocked off.
   useEffect(() => {
     const fetchBookedSlots = async () => {
       if (!selectedCounselorId || !selectedDate) {
         setBookedSlots([]);
         return;
       }
-      const { data } = await supabase
-        .from("appointments")
-        .select("time_slots")
-        .eq("counselor_id", selectedCounselorId)
-        .eq("appointment_date", selectedDate)
-        .in("status", ["paid", "pending"]);
+      const [{ data: apts }, { data: blocked }] = await Promise.all([
+        supabase
+          .from("appointments")
+          .select("time_slots")
+          .eq("counselor_id", selectedCounselorId)
+          .eq("appointment_date", selectedDate)
+          .in("status", ["paid", "pending"]),
+        supabase
+          .from("blocked_slots")
+          .select("hour")
+          .eq("counselor_id", selectedCounselorId)
+          .eq("slot_date", selectedDate),
+      ]);
 
-      if (data) {
-        setBookedSlots(data.flatMap((apt: any) => apt.time_slots));
-      }
+      const bookedHours = apts ? apts.flatMap((apt: any) => apt.time_slots) : [];
+      const blockedHours = blocked ? blocked.map((b: any) => b.hour) : [];
+      setBookedSlots([...new Set([...bookedHours, ...blockedHours])]);
     };
     fetchBookedSlots();
   }, [selectedCounselorId, selectedDate]);
@@ -171,14 +222,16 @@ function MatchPageInner() {
     const counselor = matchedCounselors.find((c) => c._id === id);
     if (counselor) setModality(counselor.mode === "in-person" ? "in-person" : "online");
 
-    await supabase
-      .from("intake_sessions")
-      .update({
-        selected_counselor_id: id,
-        status: "selected",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", sessionId);
+    if (sessionId) {
+      await supabase
+        .from("intake_sessions")
+        .update({
+          selected_counselor_id: id,
+          status: "selected",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", sessionId);
+    }
 
     setTimeout(() => {
       document.getElementById("scheduler")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -186,7 +239,7 @@ function MatchPageInner() {
   };
 
   const handleCheckout = async () => {
-    if (!intakeSession || !selectedCounselor || !selectedDate || selectedSlots.length === 0) {
+    if ((!intakeSession && !rebookUser) || !selectedCounselor || !selectedDate || selectedSlots.length === 0) {
       setStatusMessage("Please complete your selection.");
       return;
     }
@@ -194,10 +247,16 @@ function MatchPageInner() {
     setIsSubmitting(true);
     setStatusMessage("Securing your slot...");
 
+    const patientName = intakeSession?.full_name || rebookUser?.user_metadata?.full_name || rebookUser?.email;
+    const patientEmail = intakeSession?.email || rebookUser?.email;
+    const patientNotes = intakeSession?.additional_notes || null;
+    const patientPhone = intakeSession?.phone || rebookUser?.user_metadata?.phone || "";
+    const patientPhoneExt = intakeSession?.phone_extension || "";
+
     const payload = {
-      patient_name: intakeSession.full_name,
-      patient_email: intakeSession.email,
-      patient_notes: intakeSession.additional_notes,
+      patient_name: patientName,
+      patient_email: patientEmail,
+      patient_notes: patientNotes,
       counselor_id: selectedCounselor._id,
       counselor_email: selectedCounselor.email,
       counselor_name: selectedCounselor.name,
@@ -207,7 +266,7 @@ function MatchPageInner() {
       total_price: totalPrice,
       payment_gateway: "payu",
       status: "pending",
-      intake_session_id: sessionId,
+      intake_session_id: sessionId || null,
     };
 
     const { data: dbData, error: dbError } = await supabase
@@ -229,8 +288,8 @@ function MatchPageInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstname: intakeSession.full_name,
-          email: intakeSession.email,
+          firstname: patientName,
+          email: patientEmail,
           productinfo: `Session with ${selectedCounselor.name}`,
           counselor_id: selectedCounselor._id,
           slots_count: selectedSlots.length,
@@ -257,16 +316,11 @@ function MatchPageInner() {
       appendInput("txnid", txnid);
       appendInput("amount", amount);
       appendInput("productinfo", `Session with ${selectedCounselor.name}`);
-      appendInput("firstname", intakeSession.full_name);
-      appendInput("email", intakeSession.email);
+      appendInput("firstname", patientName);
+      appendInput("email", patientEmail);
       // Real phone number from the intake form, with the extension appended
       // if one was given (this used to be a hardcoded placeholder).
-      appendInput(
-        "phone",
-        intakeSession.phone_extension
-          ? `${intakeSession.phone}x${intakeSession.phone_extension}`
-          : intakeSession.phone
-      );
+      appendInput("phone", patientPhoneExt ? `${patientPhone}x${patientPhoneExt}` : patientPhone);
       appendInput("udf1", dbData.id);
       appendInput("surl", `${window.location.origin}/api/payu/response`);
       appendInput("furl", `${window.location.origin}/api/payu/response`);
@@ -297,24 +351,28 @@ function MatchPageInner() {
     <main className="min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
       <Navbar />
       <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-32 sm:px-12">
-        <div className="mb-4">
-          <Link
-            href={`/book/intake?session=${sessionId}`}
-            className="group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
-          >
-            <span className="transition-transform group-hover:-translate-x-1">←</span> Edit Your Answers
-          </Link>
-        </div>
+        {!isRebook && (
+          <div className="mb-4">
+            <Link
+              href={`/book/intake?session=${sessionId}`}
+              className="group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
+            >
+              <span className="transition-transform group-hover:-translate-x-1">←</span> Edit Your Answers
+            </Link>
+          </div>
+        )}
 
         <div className="mb-12 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.35em] text-black">
-            Your Matches
+            {isRebook ? "Book Again" : "Your Matches"}
           </p>
           <h1 className="font-serif text-3xl font-medium text-black sm:text-4xl">
-            We think these 3 can help you most
+            {isRebook ? `Continue your care with ${matchedCounselors[0]?.name || "your psychologist"}` : "We think these 3 can help you most"}
           </h1>
           <p className="mt-4 text-sm text-[#3A3A38]/70">
-            Based on what you shared, including at least one Clinical Psychologist.
+            {isRebook
+              ? "Pick a new date and time to schedule your next session."
+              : "Based on what you shared, including at least one Clinical Psychologist."}
           </p>
         </div>
 
@@ -329,7 +387,7 @@ function MatchPageInner() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className={`grid grid-cols-1 gap-6 ${isRebook ? "mx-auto max-w-sm" : "sm:grid-cols-3"}`}>
           {matchedCounselors.map((c) => {
             const isSelected = selectedCounselorId === c._id;
             const isClinical = (c.designation || "").toLowerCase().includes("clinical");
