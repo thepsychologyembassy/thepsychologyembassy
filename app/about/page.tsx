@@ -138,8 +138,6 @@ export default function AboutPage() {
         >
           <source src="/videos/desert-dunes.mp4" type="video/mp4" />
         </video>
-        {/* Soft overlay ensuring sand is visible but text remains readable */}
-        <div className="absolute inset-0 bg-[#FBF8F2]/60" />
       </div>
 
       <Navbar />
