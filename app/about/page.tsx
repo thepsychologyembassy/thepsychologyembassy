@@ -9,16 +9,38 @@ import { client, urlFor } from "../../lib/sanity";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Make text bolder and darker for ultimate readability on frosted cards
-const portableTextStyles: any = {
+// 1. Styles for the Founder bio (Left aligned, smaller font, black)
+const founderTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
-      <p className="story-paragraph mb-6 text-lg font-medium leading-relaxed text-[#1A1C20] sm:text-xl sm:leading-loose">
+      <p className="mb-4 text-sm leading-relaxed text-black">
         {children}
       </p>
     ),
     h2: ({ children }: any) => (
-      <p className="story-paragraph mb-8 font-serif text-2xl font-bold text-[#1A1C20] sm:text-3xl sm:leading-snug">
+      <p className="mb-6 font-serif text-xl font-bold text-black">
+        {children}
+      </p>
+    ),
+  },
+  marks: {
+    em: ({ children }: any) => <em className="italic">{children}</em>,
+    strong: ({ children }: any) => (
+      <strong className="font-bold text-[#A65D47]">{children}</strong>
+    ),
+  },
+};
+
+// 2. Styles for "Where It All Began" (Centered, smaller font, black, keeps GSAP class)
+const storyTextStyles: any = {
+  block: {
+    normal: ({ children }: any) => (
+      <p className="story-paragraph mb-4 text-sm leading-relaxed text-black text-center">
+        {children}
+      </p>
+    ),
+    h2: ({ children }: any) => (
+      <p className="story-paragraph mb-6 font-serif text-xl font-bold text-black text-center">
         {children}
       </p>
     ),
@@ -72,7 +94,7 @@ export default function AboutPage() {
         gsap.from(".story-paragraph", {
           opacity: 0,
           y: 30,
-          stagger: 0.2,
+          stagger: 0.15,
           duration: 1,
           ease: "power2.out",
           scrollTrigger: {
@@ -89,7 +111,7 @@ export default function AboutPage() {
           opacity: 0,
           y: 40,
           duration: 0.8,
-          delay: i * 0.15,
+          delay: i * 0.1,
           ease: "power3.out",
           scrollTrigger: {
             trigger: card,
@@ -103,7 +125,7 @@ export default function AboutPage() {
   }, [isLoading, aboutData]);
 
   return (
-    <main className="relative isolate min-h-screen text-[#1A1C20]">
+    <main className="relative isolate min-h-screen text-[#3A3A38]">
       {/* GLOBAL BACKGROUND: Desert Video applied to entire page */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
         <video
@@ -115,18 +137,18 @@ export default function AboutPage() {
         >
           <source src="/videos/desert-dunes.mp4" type="video/mp4" />
         </video>
-        {/* Soft overlay ensuring sand is visible but dark enough for white frosted cards */}
-        <div className="absolute inset-0 bg-[#FBF8F2]/40" />
+        {/* Soft overlay ensuring sand is visible but text remains readable */}
+        <div className="absolute inset-0 bg-[#FBF8F2]/30" />
       </div>
 
       <Navbar />
 
       {/* 1. HERO & ISO TAG */}
-      <section ref={heroRef} className="relative flex h-[80vh] w-full flex-col items-center justify-center">
-        {/* Left Aligned ISO Certified Badge */}
+      <section ref={heroRef} className="relative flex h-[70vh] w-full flex-col items-center justify-center sm:h-[80vh]">
+        {/* Left Aligned ISO Certified Badge - Now much smaller and glassmorphism */}
         <div className="absolute left-6 top-32 z-20 sm:left-12">
-          <div className="max-w-[280px] rounded-xl border border-white/40 bg-white/50 p-4 shadow-lg backdrop-blur-md">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-[#2C4C5B] sm:text-base">
+          <div className="max-w-50 rounded-xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-black sm:text-xs">
               ISO Certified
               <br />
               <span className="text-[#A65D47]">Government Registered Organization</span>
@@ -135,10 +157,11 @@ export default function AboutPage() {
         </div>
 
         <div className="hero-text relative z-10 flex flex-col items-center px-6 text-center">
-          <p className="mb-4 text-sm font-bold uppercase tracking-[0.35em] text-[#A65D47] drop-shadow-sm">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-black drop-shadow-sm">
             {aboutData?.subtitle || "Our Story"}
           </p>
-          <h1 className="max-w-4xl font-serif text-5xl font-bold leading-tight text-[#1A1C20] sm:text-7xl">
+          {/* Main heading size matches the rest of your app (text-4xl to text-6xl) */}
+          <h1 className="max-w-4xl font-serif text-4xl font-medium leading-tight text-black sm:text-5xl md:text-6xl">
             {aboutData?.title || "Resilience in the Vastness."}
           </h1>
         </div>
@@ -146,10 +169,10 @@ export default function AboutPage() {
 
       {/* 2. MEET OUR FOUNDER (Frosted Grid) */}
       {aboutData?.founderName && (
-        <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-24">
-          <div className="flex flex-col items-center gap-10 rounded-3xl border border-white/50 bg-white/60 p-8 shadow-xl backdrop-blur-lg md:flex-row sm:p-12">
+        <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
+          <div className="flex flex-col items-center gap-10 rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-xl md:flex-row sm:p-12">
             <div className="w-full md:w-1/3">
-              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl shadow-md">
+              <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl shadow-md border border-white/20">
                 {aboutData.founderImage ? (
                   <Image
                     src={urlFor(aboutData.founderImage).url()}
@@ -165,13 +188,13 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="w-full md:w-2/3">
-              <h2 className="mb-2 font-serif text-4xl font-bold text-[#2C4C5B]">Meet Our Founder</h2>
-              <h3 className="mb-6 text-lg font-bold uppercase tracking-widest text-[#A65D47]">
+              <h2 className="mb-2 font-serif text-3xl font-medium text-black">Meet Our Founder</h2>
+              <h3 className="mb-6 text-xs font-bold uppercase tracking-widest text-[#A65D47]">
                 {aboutData.founderName}
               </h3>
-              <div className="prose prose-lg max-w-none font-medium text-[#1A1C20]">
+              <div className="prose prose-sm max-w-none text-black">
                 {aboutData.founderBio ? (
-                  <PortableText value={aboutData.founderBio} components={portableTextStyles} />
+                  <PortableText value={aboutData.founderBio} components={founderTextStyles} />
                 ) : (
                   <p>Bio coming soon.</p>
                 )}
@@ -182,31 +205,33 @@ export default function AboutPage() {
       )}
 
       {/* 3. WHERE IT ALL BEGAN */}
-      <section ref={storyRef} className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-24">
-        <div className="flex flex-col gap-8 rounded-3xl border border-white/50 bg-white/60 p-8 shadow-xl backdrop-blur-lg sm:p-12">
-          <h2 className="font-serif text-4xl font-bold text-[#2C4C5B]">Where It All Began</h2>
+      <section ref={storyRef} className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-xl sm:p-12">
+          <h2 className="mb-4 font-serif text-3xl font-medium text-black">Where It All Began</h2>
           {isLoading ? (
-            <p className="animate-pulse text-sm font-bold uppercase tracking-widest text-[#A65D47]">Loading Story...</p>
+            <p className="animate-pulse text-xs font-bold uppercase tracking-widest text-[#A65D47]">Loading Story...</p>
           ) : aboutData?.story ? (
-            <PortableText value={aboutData?.story} components={portableTextStyles} />
+            <div className="max-w-2xl">
+              <PortableText value={aboutData?.story} components={storyTextStyles} />
+            </div>
           ) : (
-            <p className="italic font-medium text-[#1A1C20]/70">Story content coming soon.</p>
+            <p className="italic text-sm text-black/70">Story content coming soon.</p>
           )}
         </div>
       </section>
 
       {/* 4. MISSION & VISION (Side by Side Glass Cards) */}
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-24">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-          <div className="flex flex-col rounded-3xl border border-white/50 bg-white/60 p-10 shadow-xl backdrop-blur-lg transition-transform hover:-translate-y-2">
-            <h3 className="mb-4 font-serif text-3xl font-bold text-[#2C4C5B]">Our Mission</h3>
-            <p className="text-lg font-medium leading-relaxed text-[#1A1C20]">
+      <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="flex flex-col items-center text-center rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-xl transition-transform hover:-translate-y-1">
+            <h3 className="mb-3 font-serif text-2xl font-medium text-black">Our Mission</h3>
+            <p className="text-sm leading-relaxed text-black">
               {aboutData?.mission || "Mission statement coming soon."}
             </p>
           </div>
-          <div className="flex flex-col rounded-3xl border border-white/50 bg-white/60 p-10 shadow-xl backdrop-blur-lg transition-transform hover:-translate-y-2">
-            <h3 className="mb-4 font-serif text-3xl font-bold text-[#2C4C5B]">Our Vision</h3>
-            <p className="text-lg font-medium leading-relaxed text-[#1A1C20]">
+          <div className="flex flex-col items-center text-center rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-xl transition-transform hover:-translate-y-1">
+            <h3 className="mb-3 font-serif text-2xl font-medium text-black">Our Vision</h3>
+            <p className="text-sm leading-relaxed text-black">
               {aboutData?.vision || "Vision statement coming soon."}
             </p>
           </div>
@@ -215,23 +240,24 @@ export default function AboutPage() {
 
       {/* 5. FOUNDING PILLARS */}
       {aboutData?.coreValues && aboutData.coreValues.length > 0 && (
-        <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-40">
-          <div className="mb-12 text-center">
-            <h2 className="font-serif text-4xl font-bold text-[#2C4C5B] drop-shadow-sm">
+        <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-40">
+          <div className="mb-10 text-center">
+            <h2 className="font-serif text-3xl font-medium text-black drop-shadow-sm">
               Founding Pillars
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {aboutData.coreValues.map((pillar: any, i: number) => (
               <div
                 key={pillar._key || i}
                 ref={(el) => { cardsRef.current[i] = el; }}
-                className="flex flex-col rounded-3xl border border-white/50 bg-white/60 p-10 shadow-xl backdrop-blur-lg transition-all duration-500 hover:-translate-y-2 hover:bg-white/80"
+                className="flex flex-col items-center text-center rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:bg-white/20"
               >
-                <h3 className="mb-4 font-serif text-2xl font-bold text-[#A65D47]">
+                {/* Heading is black, bold, but smaller than the section sub-heading */}
+                <h3 className="mb-3 font-serif text-lg font-bold text-black">
                   {pillar.title}
                 </h3>
-                <p className="text-base font-medium leading-relaxed text-[#1A1C20]">
+                <p className="text-sm leading-relaxed text-black">
                   {pillar.description}
                 </p>
               </div>
