@@ -7,6 +7,8 @@ import Link from "next/link";
 import { PortableText } from "@portabletext/react";
 import Navbar from "../../../components/Navbar";
 import { client, urlFor } from "../../../lib/sanity";
+import { supabase } from "../../../lib/supabase";
+import { StarRatingDisplay, StarRatingInput } from "../../../components/StarRating";
 
 // Added 'any' type here to prevent TypeScript from over-analyzing the rich text objects
 const portableTextStyles: any = {
@@ -37,6 +39,18 @@ export default function ArticlePage() {
   const [post, setPost] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [ratingEntries, setRatingEntries] = useState<
+    { id: string; rating: number; comment: string | null; commenter_name: string | null; created_at: string }[]
+  >([]);
+  const [ratingsLoading, setRatingsLoading] = useState(true);
+
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [commentText, setCommentText] = useState("");
+  const [nameText, setNameText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
   useEffect(() => {
     const fetchPost = async () => {
       // Safety check to ensure the slug exists before making the database call
@@ -57,6 +71,74 @@ export default function ArticlePage() {
     
     fetchPost();
   }, [params?.slug]);
+
+  useEffect(() => {
+    const fetchRatings = async () => {
+      if (!post?._id) return;
+      setRatingsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("blog_ratings")
+          .select("id, rating, comment, commenter_name, created_at")
+          .eq("blog_id", post._id)
+          .order("created_at", { ascending: false });
+
+        if (data && !error) setRatingEntries(data);
+      } catch (error) {
+        console.error("Error fetching ratings:", error);
+      } finally {
+        setRatingsLoading(false);
+      }
+    };
+    fetchRatings();
+  }, [post?._id]);
+
+  const average =
+    ratingEntries.length > 0
+      ? ratingEntries.reduce((sum, r) => sum + r.rating, 0) / ratingEntries.length
+      : 0;
+
+  const handleSubmitRating = async () => {
+    if (selectedRating < 1) {
+      setSubmitError("Please select a star rating before submitting.");
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/blogs/rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blog_id: post._id,
+          rating: selectedRating,
+          comment: commentText,
+          commenter_name: nameText,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Something went wrong");
+
+      setSubmitSuccess(true);
+      setRatingEntries((prev) => [
+        {
+          id: `temp-${Date.now()}`,
+          rating: selectedRating,
+          comment: commentText.trim() || null,
+          commenter_name: nameText.trim() || null,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+      setSelectedRating(0);
+      setCommentText("");
+      setNameText("");
+    } catch (error: any) {
+      setSubmitError(error.message || "Failed to submit your rating. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -123,7 +205,84 @@ export default function ArticlePage() {
             <p className="text-center italic text-[#3A3A38]/50">No content available for this article.</p>
           )}
         </div>
-        
+
+        {/* Rating & Comments */}
+        <div className="mx-auto mt-16 max-w-2xl border-t border-[#3A3A38]/10 pt-12">
+          <div className="mb-10 flex flex-col items-center gap-2 text-center">
+            <h2 className="font-serif text-2xl font-medium text-[#2C4C5B]">Rate This Article</h2>
+            {!ratingsLoading && (
+              <StarRatingDisplay average={average} count={ratingEntries.length} size="md" />
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-[#3A3A38]/10 bg-white/60 p-8 shadow-sm backdrop-blur-md">
+            {submitSuccess ? (
+              <p className="text-center text-sm font-medium text-[#4F6F52]">
+                Thanks for your rating! Your feedback has been recorded.
+              </p>
+            ) : (
+              <div className="flex flex-col items-center gap-6">
+                <StarRatingInput value={selectedRating} onChange={setSelectedRating} />
+
+                <input
+                  type="text"
+                  value={nameText}
+                  onChange={(e) => setNameText(e.target.value)}
+                  placeholder="Your name (optional)"
+                  maxLength={100}
+                  className="w-full rounded-full border border-[#3A3A38]/10 bg-white/70 px-5 py-3 text-sm text-[#3A3A38] placeholder:text-[#3A3A38]/40 focus:outline-none focus:ring-2 focus:ring-[#4F6F52]/30"
+                />
+
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Share a comment about this article (optional)"
+                  maxLength={2000}
+                  rows={4}
+                  className="w-full resize-none rounded-2xl border border-[#3A3A38]/10 bg-white/70 px-5 py-4 text-sm leading-relaxed text-[#3A3A38] placeholder:text-[#3A3A38]/40 focus:outline-none focus:ring-2 focus:ring-[#4F6F52]/30"
+                />
+
+                {submitError && (
+                  <p className="text-sm font-medium text-[#A65D47]">{submitError}</p>
+                )}
+
+                <button
+                  onClick={handleSubmitRating}
+                  disabled={submitting}
+                  className="rounded-full bg-[#4F6F52] px-8 py-3 text-sm font-semibold tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? "Submitting..." : "Submit Rating"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Comments List */}
+          {ratingEntries.some((r) => r.comment) && (
+            <div className="mt-12">
+              <h3 className="mb-6 font-serif text-xl font-medium text-[#2C4C5B]">Reader Comments</h3>
+              <div className="flex flex-col gap-4">
+                {ratingEntries
+                  .filter((r) => r.comment)
+                  .map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-2xl border border-[#3A3A38]/10 bg-white/50 p-6 backdrop-blur-sm"
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-[#3A3A38]">
+                          {entry.commenter_name || "Anonymous"}
+                        </span>
+                        <StarRatingDisplay average={entry.rating} count={1} />
+                      </div>
+                      <p className="text-sm leading-relaxed text-[#3A3A38]/75">{entry.comment}</p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+
       </article>
 
       <Navbar />

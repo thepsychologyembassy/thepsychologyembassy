@@ -72,14 +72,12 @@ export default async function ToolDetailPage({ params }: { params: any }) {
             </p>
           </div>
 
-          {/* Main Article Content */}
-          <div className="prose prose-lg max-w-none text-[#3A3A38]/85 leading-relaxed mb-12 prose-headings:font-serif prose-headings:text-[#2C4C5B] prose-a:text-[#4F6F52]">
-            {tool.detailedContent ? (
+          {/* Main Article Content — render nothing if not provided in Sanity */}
+          {tool.detailedContent && (
+            <div className="prose prose-lg max-w-none text-[#3A3A38]/85 leading-relaxed mb-12 prose-headings:font-serif prose-headings:text-[#2C4C5B] prose-a:text-[#4F6F52]">
               <PortableText value={tool.detailedContent} />
-            ) : (
-              <p>Detailed instructions for this tool will be updated soon.</p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Action Area: External Link or PDF Download */}
           {(tool.link || tool.pdfUrl) && (

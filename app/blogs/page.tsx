@@ -6,6 +6,8 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Navbar from "../../components/Navbar";
 import { client } from "../../lib/sanity";
+import { supabase } from "../../lib/supabase";
+import { StarRatingDisplay } from "../../components/StarRating";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,12 +33,31 @@ export default function BlogsPage() {
   
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [ratings, setRatings] = useState<Record<string, { average: number; count: number }>>({});
 
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
         const data = await client.fetch(`*[_type == "blog"] | order(orderRank)`);
         setBlogs(data);
+
+        const { data: ratingRows, error } = await supabase
+          .from("blog_ratings")
+          .select("blog_id, rating");
+
+        if (ratingRows && !error) {
+          const grouped: Record<string, { sum: number; count: number }> = {};
+          ratingRows.forEach((row: any) => {
+            if (!grouped[row.blog_id]) grouped[row.blog_id] = { sum: 0, count: 0 };
+            grouped[row.blog_id].sum += row.rating;
+            grouped[row.blog_id].count += 1;
+          });
+          const averages: Record<string, { average: number; count: number }> = {};
+          Object.entries(grouped).forEach(([blogId, { sum, count }]) => {
+            averages[blogId] = { average: sum / count, count };
+          });
+          setRatings(averages);
+        }
       } catch (error) {
         console.error("Error fetching blogs:", error);
       } finally {
@@ -171,15 +192,21 @@ export default function BlogsPage() {
                   )}
                   
                   <div className={`mt-auto flex items-center justify-between border-t border-[#3A3A38]/10 pt-5 ${post.isComingSoon ? "mt-8" : ""}`}>
-                    <span className="text-xs font-medium uppercase tracking-widest text-[#3A3A38]/50">
-                      {post.isComingSoon ? "Status" : "Read"}
-                    </span>
-                    <span className={`flex items-center gap-2 text-sm font-medium ${post.isComingSoon ? "text-[#3A3A38]/40" : "text-[#3A3A38] transition-colors group-hover:text-[#4F6F52]"}`}>
-                      {post.isComingSoon ? "Coming Soon" : "Read Article"}
-                      {!post.isComingSoon && (
-                        <span className="transform transition-transform duration-300 group-hover:translate-x-1">→</span>
-                      )}
-                    </span>
+                    {post.isComingSoon ? (
+                      <>
+                        <span className="text-xs font-medium uppercase tracking-widest text-[#3A3A38]/50">
+                          Status
+                        </span>
+                        <span className="text-sm font-medium text-[#3A3A38]/40">
+                          Coming Soon
+                        </span>
+                      </>
+                    ) : (
+                      <StarRatingDisplay
+                        average={ratings[post._id]?.average || 0}
+                        count={ratings[post._id]?.count || 0}
+                      />
+                    )}
                   </div>
                 </Link>
               );

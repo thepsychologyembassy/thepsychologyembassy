@@ -97,11 +97,11 @@ export default function Home() {
           
           {/* INTRODUCTORY TEXT DIRECTLY ON THE BACKGROUND */}
           <div className="journey-node relative z-10 mb-16 flex w-full flex-col items-center px-4">
-            <p className="mb-4 max-w-2xl text-sm leading-relaxed text-[#FBF8F2]/90 sm:text-base">
-              Counselling, training, and community — built to make psychological support feel as natural as a conversation with a trusted friend.
+            <p className="mb-4 max-w-2xl text-sm font-bold leading-relaxed text-[#FBF8F2]/90 sm:text-base">
+              Counselling, training, and community built to make psychological support feel as natural as a conversation with a trusted friend.
             </p>
-            <p className="max-w-2xl text-sm leading-relaxed text-[#FBF8F2]/90 sm:text-base">
-              Individual sessions, structured training for psychology students, and a growing network of freelance practitioners — all under one roof in Jaipur.
+            <p className="max-w-2xl text-sm font-bold leading-relaxed text-[#FBF8F2]/90 sm:text-base">
+              Individual sessions, structured training for psychology students, and a growing network of freelance practitioners all under one roof in Jaipur.
             </p>
           </div>
 
@@ -148,25 +148,24 @@ export default function Home() {
         </div>
         
         <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-8">
-          <div className="service-card flex flex-col rounded-3xl border border-[#3A3A38]/10 bg-[#FBF8F2]/95 p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all hover:-translate-y-2 hover:shadow-xl">
+          <div className="service-card flex flex-col rounded-3xl border border-white/20 bg-white/10 p-10 shadow-[0_8px_30px_rgba(0,0,0,0.1)] backdrop-blur-md transition-all hover:-translate-y-2 hover:bg-white/20 hover:shadow-xl">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#A65D47]/10 text-[#A65D47]">
               <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
             </div>
-            <h3 className="mb-4 font-serif text-2xl font-medium text-[#3A3A38]">For Clients</h3>
-            <ul className="flex flex-col gap-3 text-sm leading-relaxed text-[#3A3A38]/80 list-disc pl-5 marker:text-[#A65D47]">
+            <h3 className="mb-4 font-serif text-2xl font-medium text-[#FBF8F2]">For Clients</h3>
+            <ul className="flex flex-col gap-3 text-sm leading-relaxed text-[#FBF8F2]/85 list-disc pl-5 marker:text-[#A65D47]">
               <li>One-on-one therapy sessions</li>
               <li>Group counselling sessions</li>
               <li>Workshops</li>
-              <li>And many more</li>
             </ul>
           </div>
 
-          <div className="service-card flex flex-col rounded-3xl border border-[#3A3A38]/10 bg-[#FBF8F2]/95 p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all hover:-translate-y-2 hover:shadow-xl">
+          <div className="service-card flex flex-col rounded-3xl border border-white/20 bg-white/10 p-10 shadow-[0_8px_30px_rgba(0,0,0,0.1)] backdrop-blur-md transition-all hover:-translate-y-2 hover:bg-white/20 hover:shadow-xl">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#4F6F52]/10 text-[#4F6F52]">
               <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
             </div>
-            <h3 className="mb-4 font-serif text-2xl font-medium text-[#3A3A38]">For Students</h3>
-            <ul className="flex flex-col gap-3 text-sm leading-relaxed text-[#3A3A38]/80 list-disc pl-5 marker:text-[#4F6F52]">
+            <h3 className="mb-4 font-serif text-2xl font-medium text-[#FBF8F2]">For Students</h3>
+            <ul className="flex flex-col gap-3 text-sm leading-relaxed text-[#FBF8F2]/85 list-disc pl-5 marker:text-[#4F6F52]">
               <li>Courses</li>
               <li>Internships</li>
               <li>Training and supervision</li>
@@ -175,12 +174,12 @@ export default function Home() {
             </ul>
           </div>
 
-          <div className="service-card flex flex-col rounded-3xl border border-[#3A3A38]/10 bg-[#FBF8F2]/95 p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all hover:-translate-y-2 hover:shadow-xl">
+          <div className="service-card flex flex-col rounded-3xl border border-white/20 bg-white/10 p-10 shadow-[0_8px_30px_rgba(0,0,0,0.1)] backdrop-blur-md transition-all hover:-translate-y-2 hover:bg-white/20 hover:shadow-xl">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#2C4C5B]/10 text-[#2C4C5B]">
               <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
             </div>
-            <h3 className="mb-4 font-serif text-2xl font-medium text-[#3A3A38]">For Professionals</h3>
-            <ul className="flex flex-col gap-3 text-sm leading-relaxed text-[#3A3A38]/80 list-disc pl-5 marker:text-[#2C4C5B]">
+            <h3 className="mb-4 font-serif text-2xl font-medium text-[#FBF8F2]">For Professionals</h3>
+            <ul className="flex flex-col gap-3 text-sm leading-relaxed text-[#FBF8F2]/85 list-disc pl-5 marker:text-[#2C4C5B]">
               <li>Peer supervision</li>
               <li>Tests and tools</li>
               <li>Collaboration opportunities</li>

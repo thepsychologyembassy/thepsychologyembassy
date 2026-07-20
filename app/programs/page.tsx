@@ -27,6 +27,7 @@ export default function ProgramsPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [paidCounts, setPaidCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchProgramsAndInventory = async () => {
@@ -57,6 +58,16 @@ export default function ProgramsPage() {
 
     fetchProgramsAndInventory();
   }, []);
+
+  const filteredPrograms = programs.filter((program) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      program.title?.toLowerCase().includes(query) ||
+      program.description?.toLowerCase().includes(query) ||
+      program._type?.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <main className="relative min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
@@ -95,6 +106,32 @@ export default function ProgramsPage() {
 
       {/* ── PROGRAMS LISTING ────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-6 pb-24 pt-16">
+        <div className="mx-auto mb-12 max-w-xl">
+          <div className="group flex items-center gap-3 rounded-full border border-[#3A3A38]/10 bg-white/60 px-6 py-4 shadow-sm backdrop-blur-xl transition-all focus-within:border-[#4F6F52]/40 focus-within:bg-white/80 focus-within:shadow-md">
+            <svg className="h-5 w-5 shrink-0 text-[#3A3A38]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search courses & internships..."
+              className="w-full bg-transparent text-sm text-[#3A3A38] placeholder:text-[#3A3A38]/40 focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+                className="shrink-0 text-[#3A3A38]/40 transition-colors hover:text-[#3A3A38]"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="flex justify-center py-20">
             <p className="animate-pulse text-sm uppercase tracking-widest text-[#88B7B5]">
@@ -105,9 +142,13 @@ export default function ProgramsPage() {
           <div className="py-20 text-center text-[#3A3A38]/60">
             No programs are currently accepting applications. Check back soon!
           </div>
+        ) : filteredPrograms.length === 0 ? (
+          <div className="py-20 text-center text-[#3A3A38]/60">
+            No courses or internships match your search.
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            {programs.map((program) => {
+            {filteredPrograms.map((program) => {
               const takenSeats = paidCounts[program._id] || 0;
               const seatsLeft = program.totalPositions - takenSeats;
               const isWaitlist = seatsLeft <= 0;
