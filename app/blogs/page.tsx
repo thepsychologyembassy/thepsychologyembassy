@@ -130,7 +130,6 @@ export default function BlogsPage() {
           >
             <source src="/videos/sky-clouds.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#FBF8F2]/60 to-[#FBF8F2]" />
         </div>
 
         <div className="hero-text relative z-10 flex h-full flex-col items-center justify-center px-6 text-center pt-20">

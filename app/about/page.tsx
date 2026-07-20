@@ -130,7 +130,7 @@ export default function AboutPage() {
       {/* GLOBAL BACKGROUND: Desert Video applied to entire page */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
         <video
-          className="h-full w-full object-cover opacity-80"
+          className="h-full w-full object-cover"
           autoPlay
           muted
           loop

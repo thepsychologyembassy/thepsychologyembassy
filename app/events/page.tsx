@@ -13,7 +13,7 @@ export default async function EventsPage() {
       
       {/* APOLLO 13 LUNAR BACKGROUND */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none bg-black">
-        <video className="h-full w-full object-cover opacity-60" autoPlay muted loop playsInline>
+        <video className="h-full w-full object-cover" autoPlay muted loop playsInline>
           <source src="/videos/field-video.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/80 via-transparent to-[#0a0a0a]/90" />

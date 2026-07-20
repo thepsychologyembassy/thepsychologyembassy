@@ -154,7 +154,6 @@ export default function BookPage() {
           <video className="h-full w-full object-cover opacity-90" autoPlay muted loop playsInline>
             <source src="/videos/beach-waves.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1E3A5F]/20 via-[#FBF8F2]/40 to-[#FBF8F2]" />
         </div>
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pt-20 text-center">
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-black drop-shadow-sm">Find Your Calm</p>

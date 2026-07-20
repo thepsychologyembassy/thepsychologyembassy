@@ -88,8 +88,6 @@ export default function ProgramsPage() {
           <source src="/videos/mountain-climb.mp4" type="video/mp4" />
         </video>
 
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1A1C20]/50 via-[#1A1C20]/30 to-[#FBF8F2]" />
-
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#CFE3E8]">
             Education & Growth

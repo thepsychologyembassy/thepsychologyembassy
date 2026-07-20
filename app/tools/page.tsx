@@ -13,7 +13,6 @@ export default async function ToolsPage() {
         <video className="h-full w-full object-cover opacity-80" autoPlay muted loop playsInline>
           <source src="/videos/aurora.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1E3A5F]/60 via-[#FBF8F2]/80 to-[#FBF8F2]" />
       </div>
 
       <Navbar />

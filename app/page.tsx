@@ -76,7 +76,6 @@ export default function Home() {
           <video className="h-full w-full object-cover" autoPlay muted loop playsInline>
             <source src="/videos/sunlit-forest-road.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#FBF8F2]/30 via-transparent to-[#FBF8F2]/60" />
         </div>
         <div className="hero-text relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
           <h1 className="max-w-3xl font-serif text-4xl font-medium leading-tight text-[#F6D86B] drop-shadow-[0_2px_18px_rgba(246,216,107,0.45)] sm:text-6xl" style={{ fontFamily: "'Cormorant Garamond', 'Playfair Display', serif" }}>
