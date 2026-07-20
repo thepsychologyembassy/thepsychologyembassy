@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { PortableText } from "@portabletext/react";
 import Image from "next/image";
+import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import { client, urlFor } from "../../lib/sanity";
 
@@ -13,7 +14,7 @@ gsap.registerPlugin(ScrollTrigger);
 const founderTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
-      <p className="mb-4 text-sm font-normal leading-relaxed text-[#171717]">
+      <p className="mb-4 text-sm font-normal leading-relaxed text-[#171717]/90">
         {children}
       </p>
     ),
@@ -35,7 +36,7 @@ const founderTextStyles: any = {
 const storyTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
-      <p className="story-paragraph mb-4 text-center text-sm font-normal leading-relaxed text-[#171717]">
+      <p className="story-paragraph mb-4 text-center text-sm font-normal leading-relaxed text-[#171717]/90">
         {children}
       </p>
     ),
@@ -144,23 +145,28 @@ export default function AboutPage() {
       {/* 1. HERO: LOGO & ISO TAG */}
       <section ref={heroRef} className="relative flex min-h-[50vh] w-full flex-col items-center justify-center pt-32 pb-12 sm:pt-40">
         <div className="hero-text px-6 flex flex-col items-center text-center">
+          
           <Image 
-            src="/logo.png" 
+            src="/about-logo.png"
             alt="Psychology Embassy Logo" 
             width={160} 
             height={160} 
             className="mb-8 object-contain drop-shadow-sm" 
             priority 
           />
-          <p className="text-sm font-medium uppercase tracking-[0.35em] text-[#171717] drop-shadow-sm leading-loose">
-            Government Registered<br />
-            ISO certified<br />
-            organization
-          </p>
+          
+          {/* Glassmorphism wrapper added here */}
+          <div className="rounded-3xl border border-[#171717]/10 bg-white/5 px-8 py-5 shadow-sm backdrop-blur-sm">
+            <p className="text-sm font-medium uppercase tracking-[0.35em] text-[#171717] drop-shadow-sm leading-loose">
+              Government Registered<br />
+              ISO certified<br />
+              organization
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* 2. MISSION & VISION (Moved Up) */}
+      {/* 2. MISSION & VISION */}
       <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
@@ -184,7 +190,6 @@ export default function AboutPage() {
           <h2 className="mb-10 text-center font-serif text-3xl font-medium text-[#171717] sm:text-4xl">
             Meet Our Founder
           </h2>
-          {/* Changed items-center to items-start to top-align the content */}
           <div className="flex flex-col items-start gap-10 rounded-3xl border border-[#171717]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
             <div className="w-full md:w-1/3">
               <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl border border-[#171717]/10 shadow-sm">
@@ -202,7 +207,6 @@ export default function AboutPage() {
                 )}
               </div>
             </div>
-            {/* Added text-left to strictly keep text on the top left */}
             <div className="w-full md:w-2/3 flex flex-col items-start text-left">
               <h3 className="mb-6 font-serif text-2xl font-medium text-[#171717] sm:text-3xl">
                 {aboutData.founderName}
@@ -232,7 +236,6 @@ export default function AboutPage() {
       {/* 5. WHERE IT ALL BEGAN */}
       <section ref={storyRef} className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
         <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-[#171717]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm sm:p-12">
-          {/* Sized down by 1 point to sit under the main Story heading nicely */}
           <h3 className="mb-4 font-serif text-2xl font-medium text-[#171717] sm:text-3xl">
             Where It All Began
           </h3>
