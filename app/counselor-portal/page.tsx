@@ -57,10 +57,11 @@ export default function CounselorPortal() {
       const { data: apts, error } = await supabase
         .from("appointments")
         .select("*")
-        .eq("counselor_email", userEmail)
-        .eq("status", "paid") // STRICTLY ONLY PAID APPOINTMENTS
+        .ilike("counselor_email", userEmail) // Changed to .ilike just in case!
+        .eq("status", "paid")
         .order("appointment_date", { ascending: true });
-
+      console.log("DEBUG - Fetched Appointments:", apts);
+      console.log("DEBUG - Supabase Error:", error);
       if (!error && apts) setAppointments(apts);
 
       // 4. Fetch this counselor's currently blocked slots
