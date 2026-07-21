@@ -1,4 +1,5 @@
 "use client";
+
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -10,7 +11,7 @@ import { client, urlFor } from "../../lib/sanity";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 1. Styles for the Founder bio (Dark Onyx text, highlighted terracotta)
+// 1. Styles for the Founder bio (Dark Onyx text, highlighted yellow)
 const founderTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
@@ -27,12 +28,12 @@ const founderTextStyles: any = {
   marks: {
     em: ({ children }: any) => <em className="italic">{children}</em>,
     strong: ({ children }: any) => (
-      <strong className="font-semibold text-[#A65D47]">{children}</strong>
+      <strong className="font-semibold text-[#F6D86B]">{children}</strong>
     ),
   },
 };
 
-// 2. Styles for "Where It All Began" (Centered, Dark Onyx text, highlighted terracotta)
+// 2. Styles for "Where It All Began" (Centered, Dark Onyx text, highlighted yellow)
 const storyTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
@@ -49,16 +50,14 @@ const storyTextStyles: any = {
   marks: {
     em: ({ children }: any) => <em className="italic">{children}</em>,
     strong: ({ children }: any) => (
-      <strong className="font-semibold text-[#A65D47]">{children}</strong>
+      <strong className="font-semibold text-[#F6D86B]">{children}</strong>
     ),
   },
 };
 
 export default function AboutPage() {
-  const heroRef = useRef<HTMLDivElement>(null);
   const storyRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
-
   const [aboutData, setAboutData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -79,18 +78,6 @@ export default function AboutPage() {
   useEffect(() => {
     if (typeof window === "undefined" || isLoading) return;
     const ctx = gsap.context(() => {
-      gsap.to(".hero-text", {
-        opacity: 0,
-        y: -40,
-        ease: "none",
-        scrollTrigger: {
-          trigger: heroRef.current,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
-
       if (aboutData?.story) {
         gsap.from(".story-paragraph", {
           opacity: 0,
@@ -105,7 +92,6 @@ export default function AboutPage() {
           },
         });
       }
-
       cardsRef.current.forEach((card, i) => {
         if (!card) return;
         gsap.from(card, {
@@ -126,8 +112,8 @@ export default function AboutPage() {
   }, [isLoading, aboutData]);
 
   return (
-    <main className="relative isolate min-h-screen text-[#171717]">
-      {/* GLOBAL BACKGROUND: Desert Video applied to entire page - 100% CLEAR */}
+    <main className="relative isolate min-h-screen text-[#171717] pt-32 pb-24">
+      {/* GLOBAL BACKGROUND: Desert Video applied to entire page */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
         <video
           className="h-full w-full object-cover"
@@ -136,55 +122,12 @@ export default function AboutPage() {
           loop
           playsInline
         >
-          <source src="/videos/desert-dunes.mp4" type="video/mp4" />
+          <source src="/videos/butterfly-flowers.mp4" type="video/mp4" />
         </video>
       </div>
-
       <Navbar />
 
-      {/* 1. HERO: LOGO & ISO TAG */}
-      <section ref={heroRef} className="relative flex min-h-[50vh] w-full flex-col items-center justify-center pt-32 pb-12 sm:pt-40">
-        <div className="hero-text px-6 flex flex-col items-center text-center">
-          
-          <Image 
-            src="/about-logo.png"
-            alt="Psychology Embassy Logo" 
-            width={160} 
-            height={160} 
-            className="mb-8 object-contain drop-shadow-sm" 
-            priority 
-          />
-          
-          {/* Glassmorphism wrapper added here */}
-          <div className="rounded-3xl border border-[#171717]/10 bg-white/5 px-8 py-5 shadow-sm backdrop-blur-sm">
-            <p className="text-sm font-medium uppercase tracking-[0.35em] text-[#171717] drop-shadow-sm leading-loose">
-              Government Registered<br />
-              ISO certified<br />
-              organization
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. MISSION & VISION */}
-      <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
-            <h3 className="mb-3 font-serif text-3xl font-medium text-[#171717]">Our Mission</h3>
-            <p className="text-sm font-normal leading-relaxed text-[#171717]/90">
-              {aboutData?.mission || "Mission statement coming soon."}
-            </p>
-          </div>
-          <div className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
-            <h3 className="mb-3 font-serif text-3xl font-medium text-[#171717]">Our Vision</h3>
-            <p className="text-sm font-normal leading-relaxed text-[#171717]/90">
-              {aboutData?.vision || "Vision statement coming soon."}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. MEET OUR FOUNDER */}
+      {/* 1. MEET OUR FOUNDER (Moved to Top) */}
       {aboutData?.founderName && (
         <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
           <h2 className="mb-10 text-center font-serif text-3xl font-medium text-[#171717] sm:text-4xl">
@@ -223,9 +166,9 @@ export default function AboutPage() {
         </section>
       )}
 
-      {/* 4. OUR STORY / RESILIENCE */}
-      <section className="relative z-10 flex w-full flex-col items-center px-6 pb-12 text-center">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-[#A65D47] drop-shadow-sm">
+      {/* 2. OUR STORY / RESILIENCE & WHERE IT ALL BEGAN */}
+      <section className="relative z-10 flex w-full flex-col items-center px-6 pb-6 text-center">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-[#F6D86B] drop-shadow-sm">
           {aboutData?.subtitle || "Our Story"}
         </p>
         <h2 className="max-w-4xl font-serif text-3xl font-medium leading-tight text-[#171717] sm:text-4xl">
@@ -233,14 +176,13 @@ export default function AboutPage() {
         </h2>
       </section>
 
-      {/* 5. WHERE IT ALL BEGAN */}
       <section ref={storyRef} className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
         <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-[#171717]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm sm:p-12">
           <h3 className="mb-4 font-serif text-2xl font-medium text-[#171717] sm:text-3xl">
             Where It All Began
           </h3>
           {isLoading ? (
-            <p className="animate-pulse text-xs font-semibold uppercase tracking-widest text-[#A65D47]">Loading Story...</p>
+            <p className="animate-pulse text-xs font-semibold uppercase tracking-widest text-[#F6D86B]">Loading Story...</p>
           ) : aboutData?.story ? (
             <div className="max-w-2xl">
               <PortableText value={aboutData?.story} components={storyTextStyles} />
@@ -251,9 +193,27 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 6. FOUNDING PILLARS */}
+      {/* 3. MISSION & VISION CARDS */}
+      <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
+            <h3 className="mb-3 font-serif text-3xl font-medium text-[#171717]">Our Mission</h3>
+            <p className="text-sm font-normal leading-relaxed text-[#171717]/90">
+              {aboutData?.mission || "Mission statement coming soon."}
+            </p>
+          </div>
+          <div className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
+            <h3 className="mb-3 font-serif text-3xl font-medium text-[#171717]">Our Vision</h3>
+            <p className="text-sm font-normal leading-relaxed text-[#171717]/90">
+              {aboutData?.vision || "Vision statement coming soon."}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. FOUNDING PILLARS */}
       {aboutData?.coreValues && aboutData.coreValues.length > 0 && (
-        <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-40">
+        <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-16">
           <div className="mb-10 text-center">
             <h2 className="font-serif text-3xl font-medium text-[#171717] sm:text-4xl">
               Founding Pillars
