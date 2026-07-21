@@ -11,16 +11,16 @@ import { client, urlFor } from "../../lib/sanity";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 1. Styles for the Founder/Intro bio (Rich dark text, highlighted yellow, Black headings)
+// 1. Styles for the Founder/Intro bio (White text, highlighted yellow, White headings)
 const founderTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
-      <p className="mb-4 text-sm font-normal leading-relaxed text-[#111111]">
+      <p className="mb-4 text-sm font-normal leading-relaxed text-white/90">
         {children}
       </p>
     ),
     h2: ({ children }: any) => (
-      <h2 className="mb-6 font-serif text-xl font-medium text-[#111111]">
+      <h2 className="mb-6 font-serif text-xl font-medium text-white">
         {children}
       </h2>
     ),
@@ -33,11 +33,11 @@ const founderTextStyles: any = {
   },
 };
 
-// 2. Styles for "Where It All Began" (Centered, Rich dark text, highlighted yellow, White headings)
+// 2. Styles for "Where It All Began" (Centered, White text, highlighted yellow, White headings)
 const storyTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
-      <p className="story-paragraph mb-4 text-center text-sm font-normal leading-relaxed text-[#111111]">
+      <p className="story-paragraph mb-4 text-center text-sm font-normal leading-relaxed text-white/90">
         {children}
       </p>
     ),
@@ -112,7 +112,7 @@ export default function AboutPage() {
   }, [isLoading, aboutData]);
 
   return (
-    <main className="relative isolate min-h-screen text-[#111111] pt-32 pb-24">
+    <main className="relative isolate min-h-screen text-white pt-32 pb-24">
       {/* GLOBAL BACKGROUND */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
         <video
@@ -130,9 +130,9 @@ export default function AboutPage() {
       {/* 1. INTRODUCTION TO WEBSITE */}
       {aboutData?.introToWebsite && (
         <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
-          <div className="flex flex-col items-start gap-10 rounded-3xl border border-[#111111]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
+          <div className="flex flex-col items-start gap-10 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
             <div className="w-full md:w-1/3">
-              <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl border border-[#111111]/10 shadow-sm">
+              <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl border border-white/10 shadow-sm">
                 {aboutData.introImage ? (
                   <Image
                     src={urlFor(aboutData.introImage).url()}
@@ -141,17 +141,17 @@ export default function AboutPage() {
                     className="object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#111111]/5 text-[#111111]/50">
+                  <div className="flex h-full w-full items-center justify-center bg-white/5 text-white/50">
                     Image Required
                   </div>
                 )}
               </div>
             </div>
             <div className="w-full md:w-2/3 flex flex-col items-start text-left">
-              <h3 className="mb-6 font-serif text-2xl font-medium text-[#111111] sm:text-3xl">
+              <h3 className="mb-6 font-serif text-2xl font-medium text-white sm:text-3xl">
                 {aboutData.introTitle || "An Introduction"}
               </h3>
-              <div className="prose prose-sm max-w-none text-[#111111] text-left">
+              <div className="prose prose-sm max-w-none text-white text-left">
                 <PortableText value={aboutData.introToWebsite} components={founderTextStyles} />
               </div>
             </div>
@@ -165,9 +165,9 @@ export default function AboutPage() {
           <h2 className="mb-10 text-center font-serif text-3xl font-medium text-white sm:text-4xl">
             Meet Our Founder
           </h2>
-          <div className="flex flex-col items-start gap-10 rounded-3xl border border-[#111111]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
+          <div className="flex flex-col items-start gap-10 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
             <div className="w-full md:w-1/3">
-              <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl border border-[#111111]/10 shadow-sm">
+              <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl border border-white/10 shadow-sm">
                 {aboutData.founderImage ? (
                   <Image
                     src={urlFor(aboutData.founderImage).url()}
@@ -176,21 +176,21 @@ export default function AboutPage() {
                     className="object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#111111]/5 text-[#111111]/50">
+                  <div className="flex h-full w-full items-center justify-center bg-white/5 text-white/50">
                     Image Required
                   </div>
                 )}
               </div>
             </div>
             <div className="w-full md:w-2/3 flex flex-col items-start text-left">
-              <h3 className="mb-6 font-serif text-2xl font-medium text-[#111111] sm:text-3xl">
+              <h3 className="mb-6 font-serif text-2xl font-medium text-white sm:text-3xl">
                 {aboutData.founderName}
               </h3>
-              <div className="prose prose-sm max-w-none text-[#111111] text-left">
+              <div className="prose prose-sm max-w-none text-white text-left">
                 {aboutData.founderBio ? (
                   <PortableText value={aboutData.founderBio} components={founderTextStyles} />
                 ) : (
-                  <p className="text-sm font-normal text-[#111111]/80">Bio coming soon.</p>
+                  <p className="text-sm font-normal text-white/80">Bio coming soon.</p>
                 )}
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function AboutPage() {
       </section>
 
       <section ref={storyRef} className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
-        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-[#111111]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm sm:p-12">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm sm:p-12">
           <h3 className="mb-4 font-serif text-2xl font-medium text-white sm:text-3xl">
             Where It All Began
           </h3>
@@ -220,7 +220,7 @@ export default function AboutPage() {
               <PortableText value={aboutData?.story} components={storyTextStyles} />
             </div>
           ) : (
-            <p className="italic text-sm text-[#111111]/60">Story content coming soon.</p>
+            <p className="italic text-sm text-white/60">Story content coming soon.</p>
           )}
         </div>
       </section>
@@ -228,15 +228,15 @@ export default function AboutPage() {
       {/* 4. MISSION & VISION CARDS */}
       <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="flex flex-col items-center rounded-3xl border border-[#111111]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
+          <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
             <h3 className="mb-3 font-serif text-3xl font-medium text-white">Our Mission</h3>
-            <p className="text-sm font-normal leading-relaxed text-[#111111]">
+            <p className="text-sm font-normal leading-relaxed text-white/90">
               {aboutData?.mission || "Mission statement coming soon."}
             </p>
           </div>
-          <div className="flex flex-col items-center rounded-3xl border border-[#111111]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
+          <div className="flex flex-col items-center rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
             <h3 className="mb-3 font-serif text-3xl font-medium text-white">Our Vision</h3>
-            <p className="text-sm font-normal leading-relaxed text-[#111111]">
+            <p className="text-sm font-normal leading-relaxed text-white/90">
               {aboutData?.vision || "Vision statement coming soon."}
             </p>
           </div>
@@ -256,12 +256,12 @@ export default function AboutPage() {
               <div
                 key={pillar._key || i}
                 ref={(el) => { cardsRef.current[i] = el; }}
-                className="flex flex-col items-center rounded-3xl border border-[#111111]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:bg-white/10"
+                className="flex flex-col items-center rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:bg-white/10"
               >
                 <h3 className="mb-3 font-serif text-xl font-medium text-white">
                   {pillar.title}
                 </h3>
-                <p className="text-sm font-normal leading-relaxed text-[#111111]">
+                <p className="text-sm font-normal leading-relaxed text-white/90">
                   {pillar.description}
                 </p>
               </div>
