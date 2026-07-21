@@ -13,7 +13,7 @@ export default {
        name: 'subtitle',
        title: 'Subtitle',
        type: 'text',
-      description: 'A short, impactful sentence below the main title.'
+       description: 'A short, impactful sentence below the main title.'
     },
     {
        name: 'mainImage',
@@ -21,7 +21,27 @@ export default {
        type: 'image',
        options: { hotspot: true }
      },
-     // --- NEW FOUNDER FIELDS ---
+     // --- NEW INTRO FIELDS ---
+    {
+       name: 'introTitle',
+       title: 'Introduction Title',
+       type: 'string',
+       initialValue: 'Welcome to Psychology Embassy'
+    },
+    {
+       name: 'introImage',
+       title: 'Introduction Image',
+       type: 'image',
+       options: { hotspot: true }
+    },
+    {
+       name: 'introToWebsite',
+       title: 'Introduction to Website',
+       type: 'array',
+       of: [{ type: 'block' }],
+       description: 'Text for the new Intro card.'
+    },
+     // --- FOUNDER FIELDS ---
     {
        name: 'founderName',
        title: 'Founder Name',
@@ -45,7 +65,7 @@ export default {
        title: 'Where It All Began',
        type: 'array',
        of: [{ type: 'block' }],
-      description: 'The narrative of how Psychology Embassy started.'
+       description: 'The narrative of how Psychology Embassy started.'
     },
     {
        name: 'mission',
