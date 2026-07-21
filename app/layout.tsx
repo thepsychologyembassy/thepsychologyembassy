@@ -4,6 +4,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import Footer from "../components/Footer";
 import CookieBanner from "../components/CookieBanner";
+import FirstTimeCouponPopup from "../components/FirstTimeCouponPopup";
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         </div>
         <Footer />
         <CookieBanner />
+        <FirstTimeCouponPopup />
         <Analytics />
         <SpeedInsights />
       </body>

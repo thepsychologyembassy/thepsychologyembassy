@@ -62,6 +62,17 @@ function MatchPageInner() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
+  // Coupon state. couponStatus reflects the last "Apply" click, purely for
+  // showing a live preview of the discount - it is NOT what gets trusted at
+  // checkout. handleCheckout always re-validates whatever is currently in
+  // couponInput itself, so an edited-but-not-reapplied code can never slip
+  // through, and the /api/payu/hash endpoint re-validates again server-side
+  // regardless of what the client sends.
+  const [couponInput, setCouponInput] = useState("");
+  const [couponStatus, setCouponStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
+  const [couponError, setCouponError] = useState("");
+  const [appliedDiscountPercent, setAppliedDiscountPercent] = useState(0);
+
   const tomorrowObj = new Date();
   tomorrowObj.setDate(tomorrowObj.getDate() + 1);
   const minDate = new Date(tomorrowObj.getTime() - tomorrowObj.getTimezoneOffset() * 60000)
@@ -212,6 +223,9 @@ function MatchPageInner() {
 
   const selectedCounselor = matchedCounselors.find((c) => c._id === selectedCounselorId);
   const totalPrice = selectedCounselor ? selectedCounselor.fees * selectedSlots.length : 0;
+  const discountedTotal = appliedDiscountPercent > 0
+    ? Math.round((totalPrice - totalPrice * (appliedDiscountPercent / 100)) * 100) / 100
+    : totalPrice;
   const isDateBlocked = selectedCounselor?.blockedDates?.includes(selectedDate);
 
   const availableHours: number[] = [];
@@ -250,6 +264,39 @@ function MatchPageInner() {
     }, 100);
   };
 
+  // Live preview only - lets the user see "✓ 15% off applied" and the
+  // discounted price before they hit checkout. Not trusted for the actual
+  // charge; see the re-validation inside handleCheckout below.
+  const applyCoupon = async () => {
+    const patientEmail = intakeSession?.email || rebookUser?.email;
+    if (!couponInput.trim() || !patientEmail) return;
+
+    setCouponStatus("checking");
+    setCouponError("");
+
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim(), patient_email: patientEmail }),
+      });
+      const result = await res.json();
+
+      if (result.valid) {
+        setAppliedDiscountPercent(result.coupon.discount_percent);
+        setCouponStatus("valid");
+      } else {
+        setAppliedDiscountPercent(0);
+        setCouponStatus("invalid");
+        setCouponError(result.error || "Invalid coupon.");
+      }
+    } catch {
+      setAppliedDiscountPercent(0);
+      setCouponStatus("invalid");
+      setCouponError("Something went wrong checking that code.");
+    }
+  };
+
   const handleCheckout = async () => {
     if ((!intakeSession && !rebookUser) || !selectedCounselor || !selectedDate || selectedSlots.length === 0) {
       setStatusMessage("Please complete your selection.");
@@ -264,6 +311,44 @@ function MatchPageInner() {
     const patientNotes = intakeSession?.additional_notes || null;
     const patientPhone = intakeSession?.phone || rebookUser?.user_metadata?.phone || "";
     const patientPhoneExt = intakeSession?.phone_extension || "";
+
+    // Re-validate whatever is currently typed in the coupon field right now
+    // - not the stale couponStatus from a previous "Apply" click. This
+    // covers the case where someone applied a code, then edited it (or
+    // typed a new one) without clicking Apply again before paying.
+    // /api/payu/hash re-validates this again server-side regardless, so
+    // this call is purely to give an accurate error message pre-payment.
+    const trimmedCoupon = couponInput.trim();
+    let couponCodeForCheckout: string | undefined = undefined;
+
+    if (trimmedCoupon) {
+      try {
+        const couponRes = await fetch("/api/coupons/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: trimmedCoupon, patient_email: patientEmail }),
+        });
+        const couponResult = await couponRes.json();
+
+        if (!couponResult.valid) {
+          setCouponStatus("invalid");
+          setCouponError(couponResult.error || "Invalid coupon.");
+          setStatusMessage("Please fix your coupon code before continuing, or clear it to pay full price.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        couponCodeForCheckout = trimmedCoupon;
+        setAppliedDiscountPercent(couponResult.coupon.discount_percent);
+        setCouponStatus("valid");
+      } catch {
+        setCouponStatus("invalid");
+        setCouponError("Couldn't verify your coupon just now. Please try again.");
+        setStatusMessage("Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     const payload = {
       patient_name: patientName,
@@ -306,11 +391,12 @@ function MatchPageInner() {
           counselor_id: selectedCounselor._id,
           slots_count: selectedSlots.length,
           appointment_id: dbData.id,
+          coupon_code: couponCodeForCheckout,
         }),
       });
 
-      const { hash, txnid, key, amount } = await res.json();
-      if (!hash) throw new Error("No Hash Generated");
+      const { hash, txnid, key, amount, error: hashError } = await res.json();
+      if (!hash) throw new Error(hashError || "No Hash Generated");
 
       const form = document.createElement("form");
       form.setAttribute("method", "POST");
@@ -565,11 +651,49 @@ function MatchPageInner() {
               )}
 
               <div className="flex flex-col gap-8 border-t border-[#3A3A38]/10 pt-8">
+                <div className="flex flex-col gap-2 sm:max-w-xs">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+                    Coupon Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase());
+                        setCouponStatus("idle");
+                        setAppliedDiscountPercent(0);
+                      }}
+                      placeholder="e.g. GET15OFF"
+                      className="flex-1 rounded-xl border border-[#3A3A38]/20 bg-white/50 px-3 py-2 text-sm uppercase tracking-wide focus:border-[#4F6F52] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={!couponInput.trim() || couponStatus === "checking"}
+                      className="rounded-xl border border-[#2C4C5B]/30 px-4 py-2 text-xs font-semibold uppercase text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B] hover:text-white disabled:opacity-50"
+                    >
+                      {couponStatus === "checking" ? "..." : "Apply"}
+                    </button>
+                  </div>
+                  {couponStatus === "valid" && (
+                    <p className="text-xs font-semibold text-[#4F6F52]">✓ {appliedDiscountPercent}% off applied</p>
+                  )}
+                  {couponStatus === "invalid" && (
+                    <p className="text-xs font-semibold text-[#A65D47]">{couponError}</p>
+                  )}
+                </div>
+
                 <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">Total Cost</p>
                     <p className="font-serif text-3xl font-medium text-[#4F6F52]">
-                      ₹{totalPrice.toLocaleString()}{" "}
+                      {appliedDiscountPercent > 0 && (
+                        <span className="mr-2 text-lg font-normal text-[#3A3A38]/40 line-through">
+                          ₹{totalPrice.toLocaleString()}
+                        </span>
+                      )}
+                      ₹{discountedTotal.toLocaleString()}{" "}
                       <span className="text-sm font-normal text-[#3A3A38]/60">
                         ({selectedSlots.length} sessions)
                       </span>

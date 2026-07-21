@@ -47,6 +47,21 @@ export async function POST(req: Request) {
 
         await sendAppointmentConfirmationEmails(existingRecord as any);
 
+        // Record the coupon redemption now that payment is actually confirmed
+        // (never before this point - an abandoned/failed checkout should not
+        // burn the user's one-time use of the code).
+        if (existingRecord.coupon_code) {
+          await supabaseAdmin.from("coupon_redemptions").upsert(
+            {
+              coupon_code: existingRecord.coupon_code,
+              patient_email: existingRecord.patient_email,
+              appointment_id: existingRecord.id,
+              discount_amount: existingRecord.discount_amount || 0,
+            },
+            { onConflict: "coupon_code,patient_email", ignoreDuplicates: true }
+          );
+        }
+
         // Close the loop on the intake session this booking came from, if any.
         if (existingRecord.intake_session_id) {
           await supabaseAdmin

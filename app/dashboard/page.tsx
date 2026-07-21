@@ -277,6 +277,15 @@ export default function DashboardPage() {
       })[0]
     : null;
 
+  // Sessions completed so far - counts paid appointments whose time slot has
+  // already fully passed (same "isPast" logic used per-card below).
+  const sessionsCompletedCount = appointments.filter((apt) => {
+    const endHour = Math.max(...(apt.time_slots || [0])) + 1;
+    const end = new Date(apt.appointment_date);
+    end.setHours(endHour, 0, 0, 0);
+    return currentTime >= end;
+  }).length;
+
   return (
     <main className="min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
       <Navbar />
@@ -287,6 +296,12 @@ export default function DashboardPage() {
           <div>
             <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#88B7B5]">Patient Portal</p>
             <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">My Appointments</h1>
+            {!isLoading && (
+              <p className="mt-2 text-sm text-[#3A3A38]/60">
+                Sessions completed so far:{" "}
+                <span className="font-semibold text-[#4F6F52]">{sessionsCompletedCount}</span>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {latestAppointment && (

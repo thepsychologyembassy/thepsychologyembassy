@@ -50,6 +50,19 @@ export async function POST(request: Request) {
       if (targetTable === "appointments" && preUpdateAppointment && !alreadyPaid) {
         await sendAppointmentConfirmationEmails(preUpdateAppointment as any);
 
+        // Record the coupon redemption now that payment is actually confirmed.
+        if (preUpdateAppointment.coupon_code) {
+          await supabaseAdmin.from("coupon_redemptions").upsert(
+            {
+              coupon_code: preUpdateAppointment.coupon_code,
+              patient_email: preUpdateAppointment.patient_email,
+              appointment_id: preUpdateAppointment.id,
+              discount_amount: preUpdateAppointment.discount_amount || 0,
+            },
+            { onConflict: "coupon_code,patient_email", ignoreDuplicates: true }
+          );
+        }
+
         // Close the loop on the intake session this booking came from, if any.
         if (preUpdateAppointment.intake_session_id) {
           await supabaseAdmin
