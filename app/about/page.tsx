@@ -11,7 +11,7 @@ import { client, urlFor } from "../../lib/sanity";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 1. Styles for the Founder bio (Dark Onyx text, highlighted yellow)
+// 1. Styles for the Founder bio (Dark Onyx text, highlighted yellow, Cerulean headings)
 const founderTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
@@ -20,7 +20,7 @@ const founderTextStyles: any = {
       </p>
     ),
     h2: ({ children }: any) => (
-      <h2 className="mb-6 font-serif text-xl font-medium text-[#171717]">
+      <h2 className="mb-6 font-serif text-xl font-medium text-[#2C4C5B]">
         {children}
       </h2>
     ),
@@ -33,7 +33,7 @@ const founderTextStyles: any = {
   },
 };
 
-// 2. Styles for "Where It All Began" (Centered, Dark Onyx text, highlighted yellow)
+// 2. Styles for "Where It All Began" (Centered, Dark Onyx text, highlighted yellow, Cerulean headings)
 const storyTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
@@ -42,7 +42,7 @@ const storyTextStyles: any = {
       </p>
     ),
     h2: ({ children }: any) => (
-      <h2 className="story-paragraph mb-6 text-center font-serif text-xl font-medium text-[#171717]">
+      <h2 className="story-paragraph mb-6 text-center font-serif text-xl font-medium text-[#2C4C5B]">
         {children}
       </h2>
     ),
@@ -127,10 +127,10 @@ export default function AboutPage() {
       </div>
       <Navbar />
 
-      {/* 1. MEET OUR FOUNDER (Moved to Top) */}
+      {/* 1. MEET OUR FOUNDER */}
       {aboutData?.founderName && (
         <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
-          <h2 className="mb-10 text-center font-serif text-3xl font-medium text-[#171717] sm:text-4xl">
+          <h2 className="mb-10 text-center font-serif text-3xl font-medium text-[#2C4C5B] sm:text-4xl">
             Meet Our Founder
           </h2>
           <div className="flex flex-col items-start gap-10 rounded-3xl border border-[#171717]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
@@ -151,7 +151,7 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="w-full md:w-2/3 flex flex-col items-start text-left">
-              <h3 className="mb-6 font-serif text-2xl font-medium text-[#171717] sm:text-3xl">
+              <h3 className="mb-6 font-serif text-2xl font-medium text-[#2C4C5B] sm:text-3xl">
                 {aboutData.founderName}
               </h3>
               <div className="prose prose-sm max-w-none text-[#171717] text-left">
@@ -171,14 +171,14 @@ export default function AboutPage() {
         <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-[#F6D86B] drop-shadow-sm">
           {aboutData?.subtitle || "Our Story"}
         </p>
-        <h2 className="max-w-4xl font-serif text-3xl font-medium leading-tight text-[#171717] sm:text-4xl">
+        <h2 className="max-w-4xl font-serif text-3xl font-medium leading-tight text-[#2C4C5B] sm:text-4xl">
           {aboutData?.title || "Resilience in the Vastness."}
         </h2>
       </section>
 
       <section ref={storyRef} className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
         <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-[#171717]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm sm:p-12">
-          <h3 className="mb-4 font-serif text-2xl font-medium text-[#171717] sm:text-3xl">
+          <h3 className="mb-4 font-serif text-2xl font-medium text-[#2C4C5B] sm:text-3xl">
             Where It All Began
           </h3>
           {isLoading ? (
@@ -197,13 +197,13 @@ export default function AboutPage() {
       <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
-            <h3 className="mb-3 font-serif text-3xl font-medium text-[#171717]">Our Mission</h3>
+            <h3 className="mb-3 font-serif text-3xl font-medium text-[#2C4C5B]">Our Mission</h3>
             <p className="text-sm font-normal leading-relaxed text-[#171717]/90">
               {aboutData?.mission || "Mission statement coming soon."}
             </p>
           </div>
           <div className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
-            <h3 className="mb-3 font-serif text-3xl font-medium text-[#171717]">Our Vision</h3>
+            <h3 className="mb-3 font-serif text-3xl font-medium text-[#2C4C5B]">Our Vision</h3>
             <p className="text-sm font-normal leading-relaxed text-[#171717]/90">
               {aboutData?.vision || "Vision statement coming soon."}
             </p>
@@ -215,7 +215,7 @@ export default function AboutPage() {
       {aboutData?.coreValues && aboutData.coreValues.length > 0 && (
         <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-16">
           <div className="mb-10 text-center">
-            <h2 className="font-serif text-3xl font-medium text-[#171717] sm:text-4xl">
+            <h2 className="font-serif text-3xl font-medium text-[#2C4C5B] sm:text-4xl">
               Founding Pillars
             </h2>
           </div>
@@ -226,7 +226,7 @@ export default function AboutPage() {
                 ref={(el) => { cardsRef.current[i] = el; }}
                 className="flex flex-col items-center rounded-3xl border border-[#171717]/10 bg-white/5 p-8 text-center shadow-sm backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:bg-white/10"
               >
-                <h3 className="mb-3 font-serif text-xl font-medium text-[#171717]">
+                <h3 className="mb-3 font-serif text-xl font-medium text-[#2C4C5B]">
                   {pillar.title}
                 </h3>
                 <p className="text-sm font-normal leading-relaxed text-[#171717]/90">
