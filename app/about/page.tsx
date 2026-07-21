@@ -11,7 +11,7 @@ import { client, urlFor } from "../../lib/sanity";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 1. Styles for the Founder/Intro bio (Dark Onyx text, highlighted yellow, White headings)
+// 1. Styles for the Founder/Intro bio (Dark Onyx text, highlighted yellow, Black headings)
 const founderTextStyles: any = {
   block: {
     normal: ({ children }: any) => (
@@ -20,7 +20,7 @@ const founderTextStyles: any = {
       </p>
     ),
     h2: ({ children }: any) => (
-      <h2 className="mb-6 font-serif text-xl font-medium text-white">
+      <h2 className="mb-6 font-serif text-xl font-medium text-[#171717]">
         {children}
       </h2>
     ),
@@ -130,16 +130,13 @@ export default function AboutPage() {
       {/* 1. INTRODUCTION TO WEBSITE */}
       {aboutData?.introToWebsite && (
         <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-24">
-          <h2 className="mb-10 text-center font-serif text-3xl font-medium text-white sm:text-4xl">
-            {aboutData.introTitle || "Introduction"}
-          </h2>
           <div className="flex flex-col items-start gap-10 rounded-3xl border border-[#171717]/10 bg-white/5 p-8 shadow-sm backdrop-blur-sm md:flex-row sm:p-12">
             <div className="w-full md:w-1/3">
               <div className="relative aspect-4/5 w-full overflow-hidden rounded-2xl border border-[#171717]/10 shadow-sm">
                 {aboutData.introImage ? (
                   <Image
                     src={urlFor(aboutData.introImage).url()}
-                    alt={aboutData.introTitle || "Introduction"}
+                    alt={aboutData.introTitle || "An Introduction"}
                     fill
                     className="object-cover"
                   />
@@ -151,6 +148,9 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="w-full md:w-2/3 flex flex-col items-start text-left">
+              <h3 className="mb-6 font-serif text-2xl font-medium text-[#171717] sm:text-3xl">
+                {aboutData.introTitle || "An Introduction"}
+              </h3>
               <div className="prose prose-sm max-w-none text-[#171717] text-left">
                 <PortableText value={aboutData.introToWebsite} components={founderTextStyles} />
               </div>
@@ -183,7 +183,7 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="w-full md:w-2/3 flex flex-col items-start text-left">
-              <h3 className="mb-6 font-serif text-2xl font-medium text-white sm:text-3xl">
+              <h3 className="mb-6 font-serif text-2xl font-medium text-[#171717] sm:text-3xl">
                 {aboutData.founderName}
               </h3>
               <div className="prose prose-sm max-w-none text-[#171717] text-left">
@@ -204,7 +204,7 @@ export default function AboutPage() {
           {aboutData?.subtitle || "Our Story"}
         </p>
         <h2 className="max-w-4xl font-serif text-3xl font-medium leading-tight text-white sm:text-4xl">
-          {aboutData?.title || "Resilience in the Vastness."}
+          {aboutData?.title || "Finding Hope, Together."}
         </h2>
       </section>
 
