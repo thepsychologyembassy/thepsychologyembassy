@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
     setMessage("");
 
     // Automatically points to localhost in dev, and your real domain in production
-    const redirectUrl = `${window.location.origin}/reset-password`;
+    const redirectUrl = `${window.location.origin}/auth/confirm?next=/reset-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
