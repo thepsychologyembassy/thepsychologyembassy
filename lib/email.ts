@@ -116,7 +116,7 @@ export async function sendAppointmentConfirmationEmails(appointment: Appointment
             isOnline
               ? meetingLink
                 ? `<p>Meeting link: <a href="${meetingLink}">${meetingLink}</a></p>`
-                : `<p style="color: #A65D47;">No meeting link is set for your account yet — please add one in your profile so patients can join.</p>`
+                : `<p style="color: #A65D47;">No meeting link is set for your account yet — please add one in your profile so clients can join.</p>`
               : `<p>This is an in-person session.</p>`
           }
           <p style="margin-top: 24px;">You can view full session details, including any pre-session notes, in your Counselor Portal.</p>

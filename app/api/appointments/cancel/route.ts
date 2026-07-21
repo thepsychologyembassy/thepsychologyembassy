@@ -150,11 +150,11 @@ export async function POST(request: Request) {
           await resend.emails.send({
             from: "The Psychology Embassy <bookings@contact.psychologyembassy.com>",
             to: counselor.email,
-            subject: "Session Cancelled by Patient",
+            subject: "Session Cancelled by Client",
             html: `
               <div style="font-family: sans-serif; color: #3A3A38;">
                 <h2>Schedule Update</h2>
-                <p>A patient has cancelled their session scheduled for <strong>${aptDate}</strong>.</p>
+                <p>A client has cancelled their session scheduled for <strong>${aptDate}</strong>.</p>
                 <p>This time slot has been freed up on your calendar automatically.</p>
               </div>
             `

@@ -294,7 +294,7 @@ export default function DashboardPage() {
         {/* Header Section */}
         <div className="mb-12 flex flex-col items-start justify-between gap-6 border-b border-[#3A3A38]/10 pb-8 sm:flex-row sm:items-end">
           <div>
-            <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#88B7B5]">Patient Portal</p>
+            <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#88B7B5]">Client Portal</p>
             <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">My Appointments</h1>
             {!isLoading && (
               <p className="mt-2 text-sm text-[#3A3A38]/60">

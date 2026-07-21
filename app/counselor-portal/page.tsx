@@ -268,10 +268,10 @@ export default function CounselorPortal() {
 
             {/* 2. PATIENT APPOINTMENTS & HOMEWORK ENGINE */}
             <div>
-              <h2 className="font-serif text-2xl text-[#2C4C5B] mb-6">Patient Roster & Homework</h2>
+              <h2 className="font-serif text-2xl text-[#2C4C5B] mb-6">Client Roster & Homework</h2>
               {appointments.length === 0 ? (
                 <div className="bg-white rounded-3xl p-10 text-center border border-[#3A3A38]/10">
-                  <p className="text-[#3A3A38]/60">No patient sessions booked right now.</p>
+                  <p className="text-[#3A3A38]/60">No client sessions booked right now.</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-6">
@@ -294,7 +294,7 @@ export default function CounselorPortal() {
                           <p className="mt-1"><strong>Time:</strong> {formatTime(Math.min(...apt.time_slots))} - {formatTime(Math.max(...apt.time_slots) + 1)}</p>
                           {apt.patient_notes && (
                             <div className="mt-3 pt-3 border-t border-[#3A3A38]/10">
-                              <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1">Patient Notes:</p>
+                              <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1">Client Notes:</p>
                               <p className="italic text-[#3A3A38]/80">{apt.patient_notes}</p>
                             </div>
                           )}
@@ -399,7 +399,7 @@ export default function CounselorPortal() {
                               )}
                               {apt.homework_submission_files?.length > 0 && (
                                 <div className="mt-2 pt-2 border-t border-[#88B7B5]/30">
-                                  <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1">Patient Submission:</p>
+                                  <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1">Client Submission:</p>
                                   <div className="flex flex-col gap-1">
                                     {apt.homework_submission_files.map((f: any) => (
                                       <a

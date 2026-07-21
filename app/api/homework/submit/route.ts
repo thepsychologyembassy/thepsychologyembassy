@@ -69,11 +69,11 @@ export async function POST(request: Request) {
         await resend.emails.send({
           from: "The Psychology Embassy <bookings@contact.psychologyembassy.com>",
           to: appointment.counselor_email,
-          subject: "Homework submitted by patient",
+          subject: "Homework submitted by client",
           html: `
             <div style="font-family: sans-serif; color: #3A3A38;">
               <h2 style="color:#2C4C5B;">Homework Submitted</h2>
-              <p>${appointment.patient_name || "Your patient"} has uploaded their completed homework.</p>
+              <p>${appointment.patient_name || "Your client"} has uploaded their completed homework.</p>
               <p>Log in to your psychologist portal to review it.</p>
             </div>
           `,
