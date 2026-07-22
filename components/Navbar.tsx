@@ -83,21 +83,35 @@ export default function Navbar() {
           <Image src="/logo.png" alt="Psychology Embassy Logo" width={160} height={160} className="h-34 w-auto sm:h-36 object-contain transition-opacity duration-300" priority />
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {!user ? (
-            <Link href="/login" className={`hidden cursor-pointer font-serif text-lg transition-colors duration-300 sm:inline-block ${
-              isSolid ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
-            }`}>
-              Log In
+            <Link
+              href="/login"
+              aria-label="Log In"
+              className={`flex items-center gap-1.5 font-serif text-lg transition-colors duration-300 ${
+                isSolid ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
+              }`}
+            >
+              <svg className="h-5 w-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+              <span className="hidden sm:inline">Log In</span>
             </Link>
           ) : (
-            <div className="hidden sm:flex items-center gap-6">
-              <Link href={isCounselor ? "/counselor-portal" : "/dashboard"} className={`font-serif text-lg transition-colors duration-300 ${
-                isSolid ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
-              }`}>
-                {isCounselor ? "Professional Portal" : "My Dashboard"}
+            <div className="flex items-center gap-3 sm:gap-6">
+              <Link
+                href={isCounselor ? "/counselor-portal" : "/dashboard"}
+                aria-label={isCounselor ? "Professional Portal" : "My Dashboard"}
+                className={`flex items-center gap-1.5 font-serif text-lg transition-colors duration-300 ${
+                  isSolid ? "text-[#3A3A38] hover:text-[#4F6F52]" : "text-[#FBF8F2] hover:text-[#F6D86B]"
+                }`}
+              >
+                <svg className="h-5 w-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+                <span className="hidden sm:inline">{isCounselor ? "Professional Portal" : "My Dashboard"}</span>
               </Link>
-              <button onClick={handleLogout} className={`text-sm font-medium transition-colors ${
+              <button onClick={handleLogout} className={`hidden text-sm font-medium transition-colors sm:block ${
                 isSolid ? "text-[#A65D47] hover:text-red-700" : "text-red-300 hover:text-white"
               }`}>
                 Log Out
