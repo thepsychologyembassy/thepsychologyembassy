@@ -123,11 +123,19 @@ export default function BookPage() {
     }
 
     setIsRouting(true);
+    // Look at the user's most recent intake session regardless of status.
+    // Previously this excluded "converted" sessions (already-booked ones),
+    // which meant anyone who'd booked before was forced through a brand new
+    // intake form every single time. Now: a draft resumes the form, and a
+    // matched/converted session takes them straight back to their top-3
+    // matches (reselect=1) - the same pathway the dashboard's "No, I don't
+    // want to continue with this psychologist" button already uses - so
+    // returning users always see their full top-3 again instead of either
+    // redoing intake or being stuck with one psychologist.
     const { data: existing } = await supabase
       .from("intake_sessions")
       .select("id, status")
       .eq("user_id", user.id)
-      .neq("status", "converted")
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -136,7 +144,7 @@ export default function BookPage() {
       if (existing.status === "draft") {
         router.push(`/book/intake?session=${existing.id}`);
       } else {
-        router.push(`/book/match?session=${existing.id}`);
+        router.push(`/book/match?session=${existing.id}&reselect=1`);
       }
       return;
     }
