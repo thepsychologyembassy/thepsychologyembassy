@@ -93,6 +93,8 @@ export default function ProgramPaymentPage() {
       // Redirects (Ensure these point to a route that handles program confirmations!)
       appendInput("surl", `${window.location.origin}/api/payu/response-program`);
       appendInput("furl", `${window.location.origin}/api/payu/response-program`);
+      // Hide EMI as a payment option on the PayU checkout page.
+      appendInput("drop_category", "EMI");
       appendInput("hash", hash);
 
       document.body.appendChild(form);

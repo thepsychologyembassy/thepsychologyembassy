@@ -422,6 +422,8 @@ function MatchPageInner() {
       appendInput("udf1", dbData.id);
       appendInput("surl", `${window.location.origin}/api/payu/response`);
       appendInput("furl", `${window.location.origin}/api/payu/response`);
+      // Hide EMI as a payment option on the PayU checkout page.
+      appendInput("drop_category", "EMI");
       appendInput("hash", hash);
 
       document.body.appendChild(form);
