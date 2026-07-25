@@ -4,6 +4,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Navbar from "../components/Navbar";
+import VideoBackground from "../components/VideoBackground";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -123,15 +124,10 @@ export default function Home() {
       {/* 1. HERO */}
       <section ref={heroRef} className="relative h-[100vh] w-full overflow-hidden">
         <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
-          <video
-            className="h-full w-full object-cover"
-            autoPlay
-            muted
-            loop
-            playsInline
-          >
-            <source src="/videos/sunlit-forest-road.mp4" type="video/mp4" />
-          </video>
+          <VideoBackground
+            src="/videos/sunlit-forest-road.mp4"
+            poster="/videos/posters/sunlit-forest-road.jpg"
+          />
         </div>
         <div className="hero-text relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
           <h1

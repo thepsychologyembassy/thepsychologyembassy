@@ -6,6 +6,7 @@ import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 import { client, urlFor } from "../../lib/sanity";
 import Navbar from "../../components/Navbar";
+import VideoBackground from "../../components/VideoBackground";
 
 interface Program {
   _id: string;
@@ -78,15 +79,12 @@ export default function ProgramsPage() {
         ref={heroRef}
         className="relative h-[100vh] w-full overflow-hidden bg-[#1A1C20]"
       >
-        <video
-          className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-        >
-          <source src="/videos/mountain-climb.mp4" type="video/mp4" />
-        </video>
+        <div className="absolute inset-0 h-full w-full">
+          <VideoBackground
+            src="/videos/mountain-climb.mp4"
+            poster="/videos/posters/mountain-climb.jpg"
+          />
+        </div>
 
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#CFE3E8]">

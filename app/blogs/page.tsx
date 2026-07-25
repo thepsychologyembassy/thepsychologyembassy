@@ -4,6 +4,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Navbar from "../../components/Navbar";
+import VideoBackground from "../../components/VideoBackground";
 import { client } from "../../lib/sanity";
 import { supabase } from "../../lib/supabase";
 import { StarRatingDisplay } from "../../components/StarRating";
@@ -125,15 +126,10 @@ export default function BlogsPage() {
       
       <section ref={heroRef} className="relative h-[80vh] w-full overflow-hidden">
         <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
-          <video
-            className="h-full w-full object-cover"
-            autoPlay
-            muted
-            loop
-            playsInline
-          >
-            <source src="/videos/sky-clouds.mp4" type="video/mp4" />
-          </video>
+          <VideoBackground
+            src="/videos/sky-clouds.mp4"
+            poster="/videos/posters/sky-clouds.jpg"
+          />
         </div>
 
         <div className="hero-text relative z-10 flex h-full flex-col items-center justify-center px-6 text-center pt-20">

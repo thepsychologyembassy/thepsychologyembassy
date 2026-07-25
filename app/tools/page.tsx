@@ -1,5 +1,6 @@
 import { client } from "../../lib/sanity";
 import Navbar from "../../components/Navbar";
+import VideoBackground from "../../components/VideoBackground";
 import ToolsGrid from "./ToolsGrid";
 
 export const revalidate = 60;
@@ -11,9 +12,10 @@ export default async function ToolsPage() {
     <main className="relative isolate min-h-screen text-white">
       {/* BACKGROUND VIDEO */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none bg-black">
-        <video className="h-full w-full object-cover" autoPlay muted loop playsInline>
-          <source src="/videos/aurora.mp4" type="video/mp4" />
-        </video>
+        <VideoBackground
+          src="/videos/aurora.mp4"
+          poster="/videos/posters/aurora.jpg"
+        />
       </div>
       
       <Navbar />

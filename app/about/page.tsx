@@ -7,6 +7,7 @@ import { PortableText } from "@portabletext/react";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
+import VideoBackground from "../../components/VideoBackground";
 import { client, urlFor } from "../../lib/sanity";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -115,15 +116,10 @@ export default function AboutPage() {
     <main className="relative isolate min-h-screen text-white pt-32 pb-24">
       {/* GLOBAL BACKGROUND */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
-        <video
-          className="h-full w-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-        >
-          <source src="/videos/butterfly-flowers.mp4" type="video/mp4" />
-        </video>
+        <VideoBackground
+          src="/videos/butterfly-flowers.mp4"
+          poster="/videos/posters/butterfly-flowers.jpg"
+        />
       </div>
       <Navbar />
 

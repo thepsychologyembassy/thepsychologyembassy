@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { client, urlFor } from "../../lib/sanity";
 import Navbar from "../../components/Navbar";
+import VideoBackground from "../../components/VideoBackground";
 
 interface Counselor {
   _id: string;
@@ -159,9 +160,10 @@ export default function BookPage() {
       {/* 1. HERO */}
       <section className="relative h-[50vh] w-full overflow-hidden sm:h-[70vh]">
         <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
-          <video className="h-full w-full object-cover" autoPlay muted loop playsInline>
-            <source src="/videos/beach-waves.mp4" type="video/mp4" />
-          </video>
+          <VideoBackground
+            src="/videos/beach-waves.mp4"
+            poster="/videos/posters/beach-waves.jpg"
+          />
         </div>
 
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pt-20 text-center">

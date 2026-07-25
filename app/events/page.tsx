@@ -1,6 +1,7 @@
 import { client, urlFor } from "../../lib/sanity";
 import { PortableText } from "@portabletext/react";
 import Navbar from "../../components/Navbar";
+import VideoBackground from "../../components/VideoBackground";
 import Image from "next/image";
 
 export const revalidate = 60; // Revalidate cache every 60 seconds
@@ -13,9 +14,10 @@ export default async function EventsPage() {
       
       {/* APOLLO 13 LUNAR BACKGROUND */}
       <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none bg-black">
-        <video className="h-full w-full object-cover" autoPlay muted loop playsInline>
-          <source src="/videos/field-video.mp4" type="video/mp4" />
-        </video>
+        <VideoBackground
+          src="/videos/field-video.mp4"
+          poster="/videos/posters/field-video.jpg"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/80 via-transparent to-[#0a0a0a]/90" />
       </div>
 
