@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [testResults, setTestResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Time calculations to activate link exactly 15 mins before
@@ -98,6 +99,19 @@ export default function DashboardPage() {
           }
         }
       }
+
+      // 3. Fetch their past Test & Tool results (personality tests, screeners, etc.)
+      try {
+        const headers = await authHeader();
+        const resultsRes = await fetch("/api/tests/results", { headers });
+        if (resultsRes.ok) {
+          const { results } = await resultsRes.json();
+          setTestResults(results || []);
+        }
+      } catch (err) {
+        console.error("Failed to load test results:", err);
+      }
+
       setIsLoading(false);
     };
 
@@ -580,6 +594,41 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+
+      {/* My Test Results */}
+      {!isLoading && testResults.length > 0 && (
+        <section className="mx-auto max-w-5xl px-6 pb-24">
+          <div className="mb-8 border-b border-[#3A3A38]/10 pb-6">
+            <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#88B7B5]">Client Portal</p>
+            <h2 className="font-serif text-3xl font-medium text-[#2C4C5B]">My Test Results</h2>
+            <p className="mt-2 text-sm text-[#3A3A38]/60">
+              Results from Tests &amp; Tools you've completed. These are self-reflection screenings,
+              not a clinical diagnosis — talk to a counsellor for a full picture.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {testResults.map((r) => (
+              <div key={r.id} className="rounded-2xl border border-[#3A3A38]/10 bg-white p-6 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#88B7B5]">{r.tool_title}</p>
+                <h3 className="mt-1 font-serif text-xl font-medium text-[#2C4C5B]">{r.range_label}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#3A3A38]/70">{r.range_description}</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-xs text-[#3A3A38]/40">
+                    {new Date(r.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                  </span>
+                  <Link
+                    href={`/tools/${r.tool_slug}`}
+                    className="text-xs font-semibold uppercase tracking-widest text-[#4F6F52] hover:underline"
+                  >
+                    Retake Test
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* NEW: Custom Cancellation Modal */}
       {appointmentToCancel && (

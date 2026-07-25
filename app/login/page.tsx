@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import Navbar from "../../components/Navbar";
@@ -9,7 +9,24 @@ import SocialLoginButtons from "../../components/SocialLoginButtons";
 import OtpVerifyForm from "../../components/OtpVerifyForm";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+function LoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Where to send the user after they log in. Defaults to the dashboard,
+  // but if they were bounced here from a gated page (e.g. /tools/some-test),
+  // we send them right back to it instead of losing their place.
+  const redirectTarget = (() => {
+    const raw = searchParams.get("redirect");
+    if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
+    return raw;
+  })();
   const [mode, setMode] = useState<"password" | "otp">("password");
   const [otpStep, setOtpStep] = useState<"request" | "verify">("request");
 
@@ -32,8 +49,8 @@ export default function LoginPage() {
       setErrorMsg(error.message);
       setIsLoading(false);
     } else {
-      // If successful, instantly send them to the Dashboard!
-      router.push("/");
+      // If successful, send them back to where they were headed.
+      router.push(redirectTarget);
     }
   };
 
@@ -81,11 +98,11 @@ export default function LoginPage() {
             <OtpVerifyForm
               email={email}
               type="email"
-              onVerified={() => router.push("/")}
+              onVerified={() => router.push(redirectTarget)}
             />
           ) : (
             <div className="flex flex-col gap-6 px-8 py-10">
-              <SocialLoginButtons redirectTo="/dashboard" />
+              <SocialLoginButtons redirectTo={redirectTarget} />
 
               <div className="flex items-center gap-4">
                 <div className="h-px flex-1 bg-[#3A3A38]/10" />
@@ -145,7 +162,7 @@ export default function LoginPage() {
                   </button>
 
                   <p className="mt-4 text-center text-sm text-[#3A3A38]/70">
-                    Don't have an account? <Link href="/signup" className="font-semibold text-[#4F6F52] hover:underline">Sign Up</Link>
+                    Don't have an account? <Link href={`/signup${redirectTarget && redirectTarget !== "/" ? `?redirect=${encodeURIComponent(redirectTarget)}` : ""}`} className="font-semibold text-[#4F6F52] hover:underline">Sign Up</Link>
                   </p>
                   <Link href="/forgot-password" className="text-sm text-[#4F6F52] hover:underline">
                     Forgot password?
@@ -177,7 +194,7 @@ export default function LoginPage() {
                   </button>
 
                   <p className="mt-4 text-center text-sm text-[#3A3A38]/70">
-                    Don't have an account? <Link href="/signup" className="font-semibold text-[#4F6F52] hover:underline">Sign Up</Link>
+                    Don't have an account? <Link href={`/signup${redirectTarget && redirectTarget !== "/" ? `?redirect=${encodeURIComponent(redirectTarget)}` : ""}`} className="font-semibold text-[#4F6F52] hover:underline">Sign Up</Link>
                   </p>
                 </form>
               )}

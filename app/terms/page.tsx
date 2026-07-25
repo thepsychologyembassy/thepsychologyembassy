@@ -41,10 +41,11 @@ export default function TermsPage() {
               Psychology Embassy provides <strong className="text-[#3A3A38]">peer support, companionship, and psychological education</strong> — not licensed therapy, clinical treatment, or medical care.
             </p>
             <ul className="flex flex-col gap-2 pl-4">
-              <li className="flex gap-3"><span className="mt-0.5 shrink-0 text-[#A65D47]">•</span>Our services do not constitute a therapist-patient or doctor-patient relationship.</li>
+              <li className="flex gap-3"><span className="mt-0.5 shrink-0 text-[#A65D47]">•</span>Our services do not constitute a therapist-client or doctor-patient relationship.</li>
               <li className="flex gap-3"><span className="mt-0.5 shrink-0 text-[#A65D47]">•</span>Our counselors and companions are not licensed psychiatrists or clinical psychologists unless explicitly stated.</li>
               <li className="flex gap-3"><span className="mt-0.5 shrink-0 text-[#A65D47]">•</span>Our services are not a substitute for professional mental health treatment, emergency care, or medical advice.</li>
               <li className="flex gap-3"><span className="mt-0.5 shrink-0 text-[#A65D47]">•</span>If you are in crisis, please contact a licensed professional or call iCall at <strong>9152987821</strong>.</li>
+              <li className="flex gap-3"><span className="mt-0.5 shrink-0 text-[#A65D47]">•</span>Our self-assessment Tests &amp; Tools are screening and self-reflection tools only. They do not diagnose any medical or psychological condition, and your results are not a substitute for evaluation by a licensed professional.</li>
             </ul>
           </div>
 

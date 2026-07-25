@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import Navbar from "../../components/Navbar";
@@ -9,7 +9,21 @@ import SocialLoginButtons from "../../components/SocialLoginButtons";
 import OtpVerifyForm from "../../components/OtpVerifyForm";
 
 export default function SignUpPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpPageInner />
+    </Suspense>
+  );
+}
+
+function SignUpPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = (() => {
+    const raw = searchParams.get("redirect");
+    if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
+    return raw;
+  })();
   const [step, setStep] = useState<"form" | "verify">("form");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -62,11 +76,11 @@ export default function SignUpPage() {
             <OtpVerifyForm
               email={email}
               type="signup"
-              onVerified={() => router.push("/")}
+              onVerified={() => router.push(redirectTarget)}
             />
           ) : (
             <div className="flex flex-col gap-6 px-8 py-10">
-              <SocialLoginButtons redirectTo="/dashboard" />
+              <SocialLoginButtons redirectTo={redirectTarget} />
 
               <div className="flex items-center gap-4">
                 <div className="h-px flex-1 bg-[#3A3A38]/10" />
@@ -120,7 +134,7 @@ export default function SignUpPage() {
                 </button>
 
                 <p className="mt-4 text-center text-sm text-[#3A3A38]/70">
-                  Already have an account? <Link href="/login" className="font-semibold text-[#4F6F52] hover:underline">Log In</Link>
+                  Already have an account? <Link href={`/login${redirectTarget && redirectTarget !== "/" ? `?redirect=${encodeURIComponent(redirectTarget)}` : ""}`} className="font-semibold text-[#4F6F52] hover:underline">Log In</Link>
                 </p>
               </form>
             </div>

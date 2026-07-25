@@ -43,10 +43,21 @@ export async function proxy(req: NextRequest) {
     const loginUrl = new URL('/login', req.url);
     return NextResponse.redirect(loginUrl);
   }
-  
+
+  // 3. Tests & Tools and Courses/Internships (Programs) require a client account.
+  // Blogs stay public on purpose, for SEO/organic discovery.
+  const isGatedContentRoute =
+    req.nextUrl.pathname.startsWith('/tools') || req.nextUrl.pathname.startsWith('/programs');
+
+  if (isGatedContentRoute && !user) {
+    const loginUrl = new URL('/login', req.url);
+    loginUrl.searchParams.set('redirect', req.nextUrl.pathname + req.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
+  }
+
   return res;
 }
 
 export const config = { 
-  matcher: ['/dashboard/:path*', '/counselor-portal/:path*', '/admin/:path*'] 
+  matcher: ['/dashboard/:path*', '/counselor-portal/:path*', '/admin/:path*', '/tools/:path*', '/programs/:path*'] 
 };

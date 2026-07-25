@@ -3,6 +3,7 @@ import { PortableText } from "@portabletext/react";
 import Navbar from "../../../components/Navbar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AssessmentQuiz from "../../../components/AssessmentQuiz";
 
 export const revalidate = 60;
 
@@ -79,32 +80,42 @@ export default async function ToolDetailPage({ params }: { params: any }) {
             </div>
           )}
 
-          {/* Action Area: External Link or PDF Download */}
-          {(tool.link || tool.pdfUrl) && (
-            <div className="mt-12 flex flex-wrap gap-4 border-t border-[#3A3A38]/10 pt-8">
-              {tool.pdfUrl && (
-                <a 
-                  href={tool.pdfUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-full bg-[#2C4C5B] px-8 py-4 text-sm font-semibold tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                  Download PDF Worksheet
-                </a>
-              )}
+          {/* Scored assessment (personality tests, screeners, etc.) */}
+          {tool.isAssessment ? (
+            <AssessmentQuiz
+              slug={slug}
+              title={tool.title}
+              questions={tool.questions || []}
+              disclaimer={tool.assessmentDisclaimer}
+            />
+          ) : (
+            /* Action Area: External Link or PDF Download */
+            (tool.link || tool.pdfUrl) && (
+              <div className="mt-12 flex flex-wrap gap-4 border-t border-[#3A3A38]/10 pt-8">
+                {tool.pdfUrl && (
+                  <a 
+                    href={tool.pdfUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-full bg-[#2C4C5B] px-8 py-4 text-sm font-semibold tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Download PDF Worksheet
+                  </a>
+                )}
 
-              {tool.link && (
-                <a 
-                  href={tool.link} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-full border border-[#2C4C5B] px-8 py-4 text-sm font-semibold tracking-wide text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B]/5"
-                >
-                  Access External Resource ↗
-                </a>
-              )}
-            </div>
+                {tool.link && (
+                  <a 
+                    href={tool.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-full border border-[#2C4C5B] px-8 py-4 text-sm font-semibold tracking-wide text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B]/5"
+                  >
+                    Access External Resource ↗
+                  </a>
+                )}
+              </div>
+            )
           )}
 
         </div>
