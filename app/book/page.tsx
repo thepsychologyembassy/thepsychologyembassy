@@ -208,11 +208,11 @@ export default function BookPage() {
                               {c.sessionsCompleted} Sessions
                             </span>
                           )}
-                          {c.speciality && (
-                            <span className="flex items-center rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
-                              {c.speciality}
+                          {c.speciality && c.speciality.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag, idx) => (
+                            <span key={idx} className="flex items-center rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
+                              {tag}
                             </span>
-                          )}
+                          ))}
                         </div>
 
                         <p className="mt-2 text-xs leading-relaxed text-[#3A3A38]/70 line-clamp-3">{c.bio}</p>

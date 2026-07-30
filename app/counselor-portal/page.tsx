@@ -11,6 +11,7 @@ export default function CounselorPortal() {
   const [counselor, setCounselor] = useState<any>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [sharedResultsByPatient, setSharedResultsByPatient] = useState<Record<string, any[]>>({});
 
   // Homework State
   const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
@@ -73,6 +74,18 @@ export default function CounselorPortal() {
         }
       } catch (err) {
         console.error("Failed to load blocked slots:", err);
+      }
+
+      // 5. Fetch any test/tool results clients have chosen to share with them
+      try {
+        const headers = await authHeader();
+        const res = await fetch("/api/tests/shared-with-me", { headers });
+        if (res.ok) {
+          const { sharedByPatient } = await res.json();
+          setSharedResultsByPatient(sharedByPatient || {});
+        }
+      } catch (err) {
+        console.error("Failed to load shared test results:", err);
       }
 
       setIsLoading(false);
@@ -299,6 +312,27 @@ export default function CounselorPortal() {
                             </div>
                           )}
                         </div>
+
+                        {(sharedResultsByPatient[apt.patient_email]?.length ?? 0) > 0 && (
+                          <div className="mt-4 rounded-xl border border-[#4F6F52]/20 bg-[#4F6F52]/5 p-4">
+                            <p className="text-[10px] uppercase tracking-widest text-[#4F6F52] mb-2 font-bold">
+                              Shared Test Results
+                            </p>
+                            <div className="flex flex-col gap-2">
+                              {sharedResultsByPatient[apt.patient_email].map((r: any) => (
+                                <div key={r.id} className="text-sm">
+                                  <p className="font-semibold text-[#2C4C5B]">
+                                    {r.tool_title}: <span className="font-normal">{r.range_label}</span>
+                                  </p>
+                                  <p className="text-xs text-[#3A3A38]/70">{r.range_description}</p>
+                                  <p className="text-[10px] text-[#3A3A38]/40 mt-0.5">
+                                    Shared {new Date(r.shared_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Action Column: Meeting Link & Homework */}

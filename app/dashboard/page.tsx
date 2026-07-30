@@ -34,6 +34,9 @@ export default function DashboardPage() {
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [continuePromptAptId, setContinuePromptAptId] = useState<string | null>(null);
 
+  // Sharing a test/tool result with a booked psychologist
+  const [sharingKey, setSharingKey] = useState<string | null>(null); // `${resultId}|${counselorEmail}` currently in flight
+
   const authHeader = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     return { Authorization: `Bearer ${session?.access_token}` };
@@ -281,6 +284,49 @@ export default function DashboardPage() {
       router.push("/book/intake");
     }
   };
+
+  // Share (or revoke) a test/tool result with a psychologist the client has
+  // actually booked and paid for a session with.
+  const toggleResultShare = async (resultId: string, counselorEmail: string, isCurrentlyShared: boolean) => {
+    const key = `${resultId}|${counselorEmail}`;
+    setSharingKey(key);
+    try {
+      const headers = await authHeader();
+      const res = await fetch("/api/tests/share", {
+        method: isCurrentlyShared ? "DELETE" : "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ resultId, counselorEmail }),
+      });
+      if (res.ok) {
+        setTestResults((prev) =>
+          prev.map((r) => {
+            if (r.id !== resultId) return r;
+            const sharedWith: string[] = r.shared_with || [];
+            return {
+              ...r,
+              shared_with: isCurrentlyShared
+                ? sharedWith.filter((e) => e !== counselorEmail)
+                : [...sharedWith, counselorEmail],
+            };
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update share status:", err);
+    } finally {
+      setSharingKey(null);
+    }
+  };
+
+  // The distinct psychologists this client has actually booked (paid) a
+  // session with — the only people a result is allowed to be shared with.
+  const bookedCounselors = Array.from(
+    new Map(
+      appointments
+        .filter((apt) => apt.counselor_email)
+        .map((apt) => [apt.counselor_email, { email: apt.counselor_email, name: apt.counselor_name }])
+    ).values()
+  );
 
   // For the "Book a Session" shortcut on the most recent session.
   const latestAppointment = appointments.length
@@ -608,24 +654,55 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {testResults.map((r) => (
-              <div key={r.id} className="rounded-2xl border border-[#3A3A38]/10 bg-white p-6 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-widest text-[#88B7B5]">{r.tool_title}</p>
-                <h3 className="mt-1 font-serif text-xl font-medium text-[#2C4C5B]">{r.range_label}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#3A3A38]/70">{r.range_description}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs text-[#3A3A38]/40">
-                    {new Date(r.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
-                  </span>
-                  <Link
-                    href={`/tools/${r.tool_slug}`}
-                    className="text-xs font-semibold uppercase tracking-widest text-[#4F6F52] hover:underline"
-                  >
-                    Retake Test
-                  </Link>
+            {testResults.map((r) => {
+              const sharedWith: string[] = r.shared_with || [];
+              return (
+                <div key={r.id} className="rounded-2xl border border-[#3A3A38]/10 bg-white p-6 shadow-sm">
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#88B7B5]">{r.tool_title}</p>
+                  <h3 className="mt-1 font-serif text-xl font-medium text-[#2C4C5B]">{r.range_label}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#3A3A38]/70">{r.range_description}</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="text-xs text-[#3A3A38]/40">
+                      {new Date(r.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                    </span>
+                    <Link
+                      href={`/tools/${r.tool_slug}`}
+                      className="text-xs font-semibold uppercase tracking-widest text-[#4F6F52] hover:underline"
+                    >
+                      Retake Test
+                    </Link>
+                  </div>
+
+                  {bookedCounselors.length > 0 && (
+                    <div className="mt-4 border-t border-[#3A3A38]/10 pt-4">
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#3A3A38]/50">
+                        Share with your psychologist
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {bookedCounselors.map((c) => {
+                          const isShared = sharedWith.includes(c.email);
+                          const isBusy = sharingKey === `${r.id}|${c.email}`;
+                          return (
+                            <button
+                              key={c.email}
+                              onClick={() => toggleResultShare(r.id, c.email, isShared)}
+                              disabled={isBusy}
+                              className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide transition-colors disabled:opacity-50 ${
+                                isShared
+                                  ? "border-[#4F6F52] bg-[#4F6F52]/10 text-[#4F6F52]"
+                                  : "border-[#3A3A38]/20 text-[#3A3A38]/60 hover:border-[#4F6F52]"
+                              }`}
+                            >
+                              {isShared ? "✓ Shared with " : "Share with "}{c.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

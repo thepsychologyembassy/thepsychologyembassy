@@ -514,9 +514,13 @@ function MatchPageInner() {
                     {c.designation}
                   </p>
                   {c.speciality && (
-                    <span className="mt-2 inline-block rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
-                      {c.speciality}
-                    </span>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {c.speciality.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag, idx) => (
+                        <span key={idx} className="inline-block rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   )}
                   <p className="mt-3 text-xs leading-relaxed text-[#3A3A38]/70 line-clamp-4">{c.bio}</p>
                   {matchReasoning[c._id] && (

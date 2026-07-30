@@ -31,7 +31,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Could not load results" }, { status: 500 });
     }
 
-    return NextResponse.json({ results: data || [] });
+    const results = data || [];
+
+    // Attach which booked psychologist(s), if any, each result has been
+    // shared with — so the dashboard can render share/unshare toggles.
+    let shares: Record<string, string[]> = {};
+    if (results.length > 0) {
+      const { data: shareRows } = await supabaseAdmin
+        .from("test_result_shares")
+        .select("test_result_id, counselor_email")
+        .in("test_result_id", results.map((r) => r.id));
+
+      shares = (shareRows || []).reduce((acc: Record<string, string[]>, row) => {
+        (acc[row.test_result_id] ||= []).push(row.counselor_email);
+        return acc;
+      }, {});
+    }
+
+    return NextResponse.json({
+      results: results.map((r) => ({ ...r, shared_with: shares[r.id] || [] })),
+    });
   } catch (err) {
     console.error("Test results fetch error:", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
