@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import type { Session } from "@supabase/supabase-js";
 import { PortableText } from "@portabletext/react";
 import Navbar from "../../../components/Navbar";
 import { client, urlFor } from "../../../lib/sanity";
@@ -36,6 +37,7 @@ const portableTextStyles: any = {
 export default function ArticlePage() {
   // Explicitly told TypeScript that "slug" is a string
   const params = useParams<{ slug: string }>();
+  const pathname = usePathname();
   const [post, setPost] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,12 +46,36 @@ export default function ArticlePage() {
   >([]);
   const [ratingsLoading, setRatingsLoading] = useState(true);
 
+  // Only signed-in users can rate/comment. We track the session so we can
+  // gate the form and attach an access token to the submission.
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [selectedRating, setSelectedRating] = useState(0);
   const [commentText, setCommentText] = useState("");
   const [nameText, setNameText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+      if (session?.user?.user_metadata?.full_name) {
+        setNameText(session.user.user_metadata.full_name);
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user?.user_metadata?.full_name) {
+        setNameText((prev) => prev || session.user.user_metadata.full_name);
+      }
+    });
+
+    return () => authListener.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -99,6 +125,10 @@ export default function ArticlePage() {
       : 0;
 
   const handleSubmitRating = async () => {
+    if (!session) {
+      setSubmitError("Please sign in to rate or comment on this article.");
+      return;
+    }
     if (selectedRating < 1) {
       setSubmitError("Please select a star rating before submitting.");
       return;
@@ -108,7 +138,10 @@ export default function ArticlePage() {
     try {
       const res = await fetch("/api/blogs/rate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           blog_id: post._id,
           rating: selectedRating,
@@ -216,7 +249,27 @@ export default function ArticlePage() {
           </div>
 
           <div className="rounded-3xl border border-[#3A3A38]/10 bg-white/60 p-8 shadow-sm backdrop-blur-md">
-            {submitSuccess ? (
+            {authLoading ? null : !session ? (
+              <div className="flex flex-col items-center gap-4 text-center">
+                <p className="text-sm text-[#3A3A38]/70">
+                  Sign in to rate this article and join the conversation.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <Link
+                    href={`/signup?redirect=${encodeURIComponent(pathname || "/blogs")}`}
+                    className="rounded-full bg-[#4F6F52] px-6 py-2.5 text-sm font-semibold tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-md"
+                  >
+                    Sign Up
+                  </Link>
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent(pathname || "/blogs")}`}
+                    className="rounded-full border border-[#3A3A38]/20 px-6 py-2.5 text-sm font-semibold tracking-wide text-[#3A3A38] transition-colors hover:border-[#4F6F52] hover:text-[#4F6F52]"
+                  >
+                    Log In
+                  </Link>
+                </div>
+              </div>
+            ) : submitSuccess ? (
               <p className="text-center text-sm font-medium text-[#4F6F52]">
                 Thanks for your rating! Your feedback has been recorded.
               </p>
