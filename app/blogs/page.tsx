@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -34,6 +34,9 @@ export default function BlogsPage() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [ratings, setRatings] = useState<Record<string, { average: number; count: number }>>({});
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"latest" | "earliest" | "popularity">("latest");
 
   useEffect(() => {
     const fetchBlogs = async () => {
@@ -88,8 +91,43 @@ export default function BlogsPage() {
     return () => ctx.revert();
   }, []);
 
+  // Search: matches title or excerpt, case-insensitive.
+  // Sort: Latest/Earliest by publish date, Popularity by rating count
+  // (more ratings = more popular), then by average rating as a tiebreaker.
+  // "Coming soon" posts have no date/ratings yet, so they're always sorted
+  // to the end rather than randomly landing first under a date sort.
+  const visibleBlogs = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = query
+      ? blogs.filter(
+          (post) =>
+            post.title?.toLowerCase().includes(query) ||
+            post.excerpt?.toLowerCase().includes(query)
+        )
+      : blogs;
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (a.isComingSoon && !b.isComingSoon) return 1;
+      if (!a.isComingSoon && b.isComingSoon) return -1;
+      if (a.isComingSoon && b.isComingSoon) return 0;
+
+      if (sortBy === "popularity") {
+        const aStats = ratings[a._id] || { average: 0, count: 0 };
+        const bStats = ratings[b._id] || { average: 0, count: 0 };
+        if (bStats.count !== aStats.count) return bStats.count - aStats.count;
+        return bStats.average - aStats.average;
+      }
+
+      const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return sortBy === "earliest" ? aTime - bTime : bTime - aTime;
+    });
+
+    return sorted;
+  }, [blogs, ratings, searchQuery, sortBy]);
+
   useEffect(() => {
-    if (blogs.length === 0) return;
+    if (visibleBlogs.length === 0) return;
 
     const ctx = gsap.context(() => {
       cardsRef.current.forEach((card, i) => {
@@ -110,7 +148,7 @@ export default function BlogsPage() {
     });
 
     return () => ctx.revert();
-  }, [blogs]);
+  }, [visibleBlogs]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Recent";
@@ -146,13 +184,66 @@ export default function BlogsPage() {
       </section>
 
       <section className="relative z-10 mx-auto w-full max-w-5xl px-6 pb-40">
+        {/* Search + Sort */}
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <svg
+              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#3A3A38]/40"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.4 4.4a7.5 7.5 0 0012.25 12.25z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search articles..."
+              className="w-full rounded-full border border-[#3A3A38]/10 bg-white/60 py-3 pl-11 pr-5 text-sm text-[#3A3A38] placeholder:text-[#3A3A38]/40 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#4F6F52]/30"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest">
+            {(
+              [
+                { key: "latest", label: "Latest" },
+                { key: "earliest", label: "Earliest" },
+                { key: "popularity", label: "Popularity" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.key}
+                onClick={() => setSortBy(option.key)}
+                className={`rounded-full px-4 py-2 transition-colors ${
+                  sortBy === option.key
+                    ? "bg-[#4F6F52] text-white"
+                    : "bg-white/50 text-[#3A3A38]/60 hover:bg-white/80"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="flex justify-center py-20">
             <p className="animate-pulse text-sm uppercase tracking-widest text-[#88B7B5]">Loading Articles...</p>
           </div>
+        ) : visibleBlogs.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-20 text-center">
+            <p className="text-sm text-[#3A3A38]/60">No articles match "{searchQuery}".</p>
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-xs font-medium uppercase tracking-widest text-[#4F6F52] hover:underline"
+            >
+              Clear search
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-            {blogs.map((post, i) => {
+            {visibleBlogs.map((post, i) => {
               const style = TAG_STYLES[i % TAG_STYLES.length];
               
               return (

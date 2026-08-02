@@ -58,6 +58,15 @@ export default function ArticlePage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // Same ordering as the /blogs listing (orderRank), used to work out
+  // which article is "previous" and "next" from wherever the reader is now.
+  const [siblingPosts, setSiblingPosts] = useState<
+    { _id: string; title: string; slug: { current: string } }[]
+  >([]);
+
+  // Back-to-top button only shows once the reader has scrolled down a bit.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -99,6 +108,26 @@ export default function ArticlePage() {
   }, [params?.slug]);
 
   useEffect(() => {
+    const fetchSiblings = async () => {
+      try {
+        const data = await client.fetch(
+          `*[_type == "blog" && isComingSoon != true] | order(orderRank) { _id, title, slug }`
+        );
+        setSiblingPosts(data);
+      } catch (error) {
+        console.error("Error fetching sibling posts:", error);
+      }
+    };
+    fetchSiblings();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 600);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
     const fetchRatings = async () => {
       if (!post?._id) return;
       setRatingsLoading(true);
@@ -123,6 +152,15 @@ export default function ArticlePage() {
     ratingEntries.length > 0
       ? ratingEntries.reduce((sum, r) => sum + r.rating, 0) / ratingEntries.length
       : 0;
+
+  const currentIndex = siblingPosts.findIndex((p) => p._id === post?._id);
+  const previousPost = currentIndex > 0 ? siblingPosts[currentIndex - 1] : null;
+  const nextPost =
+    currentIndex >= 0 && currentIndex < siblingPosts.length - 1
+      ? siblingPosts[currentIndex + 1]
+      : null;
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   const handleSubmitRating = async () => {
     if (!session) {
@@ -336,7 +374,59 @@ export default function ArticlePage() {
           )}
         </div>
 
+        {/* Previous / Next Article Navigation */}
+        {(previousPost || nextPost) && (
+          <div className="mx-auto mt-16 flex max-w-2xl flex-col gap-4 border-t border-[#3A3A38]/10 pt-10 sm:flex-row sm:items-stretch sm:justify-between">
+            {previousPost ? (
+              <Link
+                href={`/blogs/${previousPost.slug.current}`}
+                className="group flex flex-1 flex-col rounded-2xl border border-[#3A3A38]/10 bg-white/50 px-6 py-5 text-left backdrop-blur-sm transition-colors hover:bg-white/80"
+              >
+                <span className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/50">
+                  <span className="transition-transform group-hover:-translate-x-1">←</span>
+                  Read Previous
+                </span>
+                <span className="font-serif text-lg font-medium text-[#2C4C5B] line-clamp-2">
+                  {previousPost.title}
+                </span>
+              </Link>
+            ) : (
+              <div className="flex-1" />
+            )}
+
+            {nextPost ? (
+              <Link
+                href={`/blogs/${nextPost.slug.current}`}
+                className="group flex flex-1 flex-col rounded-2xl border border-[#3A3A38]/10 bg-white/50 px-6 py-5 text-right backdrop-blur-sm transition-colors hover:bg-white/80"
+              >
+                <span className="mb-1 flex items-center justify-end gap-2 text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/50">
+                  Read Next
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
+                </span>
+                <span className="font-serif text-lg font-medium text-[#2C4C5B] line-clamp-2">
+                  {nextPost.title}
+                </span>
+              </Link>
+            ) : (
+              <div className="flex-1" />
+            )}
+          </div>
+        )}
+
       </article>
+
+      {/* Back to Top */}
+      <button
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        className={`fixed bottom-8 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#4F6F52] text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:right-10 ${
+          showBackToTop ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        </svg>
+      </button>
 
       <Navbar />
     </main>
