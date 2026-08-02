@@ -29,7 +29,7 @@ const TAG_STYLES = [
 
 export default function BlogsPage() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const cardsRef = useRef<(HTMLAnchorElement | null)[]>([]);
+  const hasAnimatedCards = useRef(false);
 
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,29 +126,34 @@ export default function BlogsPage() {
     return sorted;
   }, [blogs, ratings, searchQuery, sortBy]);
 
+  // Runs once, the first time cards land on the page. Re-sorting or
+  // searching just reorders/filters the existing elements — it must NOT
+  // replay this animation, or every card fades out and back in each time
+  // (which is what was happening before).
   useEffect(() => {
-    if (visibleBlogs.length === 0) return;
+    if (isLoading || hasAnimatedCards.current || blogs.length === 0) return;
+    hasAnimatedCards.current = true;
 
     const ctx = gsap.context(() => {
-      cardsRef.current.forEach((card, i) => {
-        if (!card) return;
+      const cards = gsap.utils.toArray<HTMLElement>(".blog-card");
+      cards.forEach((card, i) => {
         gsap.from(card, {
           opacity: 0,
           y: 40,
           duration: 0.9,
-          delay: i * 0.1,
+          delay: i * 0.06,
           ease: "power3.out",
           scrollTrigger: {
             trigger: card,
             start: "top 85%",
-            toggleActions: "play none none reverse",
+            toggleActions: "play none none none",
           },
         });
       });
     });
 
     return () => ctx.revert();
-  }, [visibleBlogs]);
+  }, [isLoading, blogs]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Recent";
@@ -251,8 +256,7 @@ export default function BlogsPage() {
                   href={post.isComingSoon ? "#" : `/blogs/${post.slug?.current || ""}`}
                   onClick={(e) => post.isComingSoon && e.preventDefault()}
                   key={post._id}
-                  ref={(el) => { cardsRef.current[i] = el; }}
-                  className={`group flex flex-col rounded-3xl border border-[#3A3A38]/5 bg-white/40 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] backdrop-blur-md ${
+                  className={`blog-card group flex flex-col rounded-3xl border border-[#3A3A38]/5 bg-white/40 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] backdrop-blur-md ${
                     post.isComingSoon 
                       ? "opacity-60 cursor-default" 
                       : "cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:bg-white/70 hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)]"
@@ -264,9 +268,17 @@ export default function BlogsPage() {
                     </span>
                     {/* HIDE DATE IF COMING SOON */}
                     {!post.isComingSoon && (
-                      <span className="text-xs font-medium uppercase tracking-widest text-black/60">
-                        {formatDate(post.publishedAt)}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-xs font-medium text-[#3A3A38]/50">
+                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.31 0-6 1.79-6 4v1h12v-1c0-2.21-2.69-4-6-4z" />
+                          </svg>
+                          {ratings[post._id]?.count || 0}
+                        </span>
+                        <span className="text-xs font-medium uppercase tracking-widest text-black/60">
+                          {formatDate(post.publishedAt)}
+                        </span>
+                      </div>
                     )}
                   </div>
                   
