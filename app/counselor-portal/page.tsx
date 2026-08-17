@@ -38,6 +38,12 @@ export default function CounselorPortal() {
   const [recurringSelectedDay, setRecurringSelectedDay] = useState<number>(3); // default Wednesday
   const [togglingRecurringKey, setTogglingRecurringKey] = useState<string | null>(null);
 
+  // Working hours (shiftStart/shiftEnd), editable by the counselor themself.
+  const [shiftStartInput, setShiftStartInput] = useState<number>(12);
+  const [shiftEndInput, setShiftEndInput] = useState<number>(20);
+  const [isSavingHours, setIsSavingHours] = useState(false);
+  const [hoursSaveMsg, setHoursSaveMsg] = useState("");
+
   const WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   // Quarter-hour slot <-> time helpers.
@@ -83,6 +89,8 @@ export default function CounselorPortal() {
         return;
       }
       setCounselor(sanityCounselor);
+      setShiftStartInput(sanityCounselor.shiftStart ?? 12);
+      setShiftEndInput(sanityCounselor.shiftEnd ?? 20);
 
       // 3. Fetch their Patients' Appointments
       const { data: apts, error } = await supabase
@@ -176,6 +184,37 @@ export default function CounselorPortal() {
       });
     }
     return days;
+  };
+
+  const saveWorkingHours = async () => {
+    if (shiftEndInput <= shiftStartInput) {
+      setHoursSaveMsg("End time must be after start time.");
+      return;
+    }
+    setIsSavingHours(true);
+    setHoursSaveMsg("");
+    try {
+      const headers = await authHeader();
+      const res = await fetch("/api/counselor/profile", {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ shiftStart: shiftStartInput, shiftEnd: shiftEndInput }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setHoursSaveMsg(result.error || "Failed to save working hours.");
+        return;
+      }
+      // Reflect the new hours immediately in the availability grid below.
+      setCounselor((prev: any) => prev && { ...prev, shiftStart: result.shiftStart, shiftEnd: result.shiftEnd });
+      setHoursSaveMsg("Saved!");
+      setTimeout(() => setHoursSaveMsg(""), 2500);
+    } catch (err) {
+      console.error("Failed to save working hours:", err);
+      setHoursSaveMsg("Something went wrong. Please try again.");
+    } finally {
+      setIsSavingHours(false);
+    }
   };
 
   const toggleSlotBlock = async (dateStr: string, slot: number, isCurrentlyBlocked: boolean) => {
@@ -386,6 +425,53 @@ export default function CounselorPortal() {
 
           {activeTab === "calendar" && (
           <div className="flex flex-col gap-16">
+
+            {/* 0. WORKING HOURS - counselor sets their own daily shift window */}
+            <div className="bg-white rounded-3xl p-6 border border-[#3A3A38]/10 shadow-sm">
+              <h2 className="font-serif text-2xl text-[#2C4C5B] mb-1">Working Hours</h2>
+              <p className="text-sm text-[#3A3A38]/60 mb-6">
+                Set the daily window clients can book you in. This applies every day unless a specific day is fully blocked below.
+              </p>
+              <div className="flex flex-wrap items-end gap-6">
+                <label className="flex flex-col gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#3A3A38]/60">Start Time</span>
+                  <select
+                    value={shiftStartInput}
+                    onChange={(e) => setShiftStartInput(Number(e.target.value))}
+                    className="rounded-xl border border-[#3A3A38]/15 bg-[#FBF8F2] px-4 py-2.5 text-sm text-[#3A3A38]"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{formatTime(h * 4)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#3A3A38]/60">End Time</span>
+                  <select
+                    value={shiftEndInput}
+                    onChange={(e) => setShiftEndInput(Number(e.target.value))}
+                    className="rounded-xl border border-[#3A3A38]/15 bg-[#FBF8F2] px-4 py-2.5 text-sm text-[#3A3A38]"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{formatTime(h * 4)}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={saveWorkingHours}
+                  disabled={isSavingHours}
+                  className="rounded-full bg-[#2C4C5B] px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-[#243e4a] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingHours ? "Saving..." : "Save Working Hours"}
+                </button>
+                {hoursSaveMsg && (
+                  <span className={`text-sm ${hoursSaveMsg === "Saved!" ? "text-[#4F6F52]" : "text-red-600"}`}>
+                    {hoursSaveMsg}
+                  </span>
+                )}
+              </div>
+            </div>
 
             {/* 1. SCHEDULE OVERVIEW (NEXT 6 DAYS) */}
             <div>
