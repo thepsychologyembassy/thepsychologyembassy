@@ -75,9 +75,10 @@ export default function DashboardPage() {
         // show the feedback form again once it's been submitted.
         const now = new Date();
         const pastApts = data.filter((apt: any) => {
-          const endHour = Math.max(...(apt.time_slots || [0])) + 1;
+          const endSlot = Math.max(...(apt.time_slots || [0])) + 1;
           const end = new Date(apt.appointment_date);
-          end.setHours(endHour, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          end.setMinutes(endSlot * 15);
           return now >= end;
         });
 
@@ -161,18 +162,27 @@ export default function DashboardPage() {
     }
   };
 
-  // Helper to format 24hr array into human string
+  // Helper to format an array of 15-min slot indices into a human time range.
+  // 0 = 00:00, 40 = 10:00, 41 = 10:15 ... 95 = 23:45.
+  const slotToDate = (baseDate: Date, slot: number) => {
+    const d = new Date(baseDate);
+    d.setHours(0, 0, 0, 0);
+    d.setMinutes(slot * 15);
+    return d;
+  };
+  const formatSlotTime = (slot: number) => {
+    const totalMinutes = slot * 15;
+    const h24 = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const ampm = h24 >= 12 ? "PM" : "AM";
+    const h = h24 % 12 || 12;
+    return `${h < 10 ? "0" : ""}${h}:${m < 10 ? "0" : ""}${m} ${ampm}`;
+  };
   const formatTimeRange = (slots: number[]) => {
     if (!slots || slots.length === 0) return "TBD";
-    const startHour = Math.min(...slots);
-    const endHour = Math.max(...slots) + 1; 
-    
-    const format = (h: number) => {
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const formattedH = h % 12 || 12;
-      return `${formattedH < 10 ? '0' : ''}${formattedH}:00 ${ampm}`;
-    };
-    return `${format(startHour)} - ${format(endHour)}`;
+    const startSlot = Math.min(...slots);
+    const endSlot = Math.max(...slots) + 1;
+    return `${formatSlotTime(startSlot)} - ${formatSlotTime(endSlot)}`;
   };
 
   const handleSubmissionFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
@@ -331,8 +341,8 @@ export default function DashboardPage() {
   // For the "Book a Session" shortcut on the most recent session.
   const latestAppointment = appointments.length
     ? [...appointments].sort((a, b) => {
-        const aEnd = new Date(a.appointment_date).getTime() + Math.max(...(a.time_slots || [0]));
-        const bEnd = new Date(b.appointment_date).getTime() + Math.max(...(b.time_slots || [0]));
+        const aEnd = new Date(a.appointment_date).getTime() + Math.max(...(a.time_slots || [0])) * 15 * 60 * 1000;
+        const bEnd = new Date(b.appointment_date).getTime() + Math.max(...(b.time_slots || [0])) * 15 * 60 * 1000;
         return bEnd - aEnd;
       })[0]
     : null;
@@ -340,9 +350,8 @@ export default function DashboardPage() {
   // Sessions completed so far - counts paid appointments whose time slot has
   // already fully passed (same "isPast" logic used per-card below).
   const sessionsCompletedCount = appointments.filter((apt) => {
-    const endHour = Math.max(...(apt.time_slots || [0])) + 1;
-    const end = new Date(apt.appointment_date);
-    end.setHours(endHour, 0, 0, 0);
+    const endSlot = Math.max(...(apt.time_slots || [0])) + 1;
+    const end = slotToDate(new Date(apt.appointment_date), endSlot);
     return currentTime >= end;
   }).length;
 
@@ -396,11 +405,11 @@ export default function DashboardPage() {
             {appointments.map((apt) => {
               // Time Math for Meeting Link Logic
               const aptDate = new Date(apt.appointment_date);
-              const startHour = Math.min(...apt.time_slots);
-              const endHour = Math.max(...apt.time_slots) + 1;
-              
-              const startTime = new Date(aptDate.setHours(startHour, 0, 0, 0));
-              const endTime = new Date(aptDate.setHours(endHour, 0, 0, 0));
+              const startSlot = Math.min(...apt.time_slots);
+              const endSlot = Math.max(...apt.time_slots) + 1;
+
+              const startTime = slotToDate(aptDate, startSlot);
+              const endTime = slotToDate(aptDate, endSlot);
               
               // Exactly 30 minutes before
               const activationTime = new Date(startTime.getTime() - 30 * 60000); 

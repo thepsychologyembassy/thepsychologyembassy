@@ -23,8 +23,8 @@ interface AppointmentRow {
 
 function formatSessionTime(appointment_date: string, time_slots: number[]) {
   const sorted = [...time_slots].sort((a, b) => a - b);
-  const startHour = sorted[0];
-  const endHour = sorted[sorted.length - 1] + 1;
+  const startSlot = sorted[0];
+  const endSlot = sorted[sorted.length - 1] + 1;
 
   const dateObj = new Date(appointment_date);
   const dateStr = dateObj.toLocaleDateString("en-IN", {
@@ -34,13 +34,17 @@ function formatSessionTime(appointment_date: string, time_slots: number[]) {
     day: "numeric",
   });
 
-  const to12h = (h: number) => {
-    const period = h >= 12 ? "PM" : "AM";
-    const hour12 = h % 12 === 0 ? 12 : h % 12;
-    return `${hour12}:00 ${period}`;
+  // Slots are quarter-hour indices: 0 = 00:00, 40 = 10:00, 41 = 10:15 ...
+  const to12h = (slot: number) => {
+    const totalMinutes = slot * 15;
+    const h24 = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const period = h24 >= 12 ? "PM" : "AM";
+    const hour12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    return `${hour12}:${m < 10 ? "0" : ""}${m} ${period}`;
   };
 
-  return { dateStr, timeStr: `${to12h(startHour)} - ${to12h(endHour)}` };
+  return { dateStr, timeStr: `${to12h(startSlot)} - ${to12h(endSlot)}` };
 }
 
 /**

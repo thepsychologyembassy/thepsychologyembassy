@@ -12,6 +12,16 @@ export default function AdminDashboard() {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Tab: applications vs appointments review
+  const [activeTab, setActiveTab] = useState<"applications" | "appointments">("applications");
+
+  // Appointments review state
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
+  const [appointmentFilter, setAppointmentFilter] = useState<
+    "all" | "completed" | "upcoming" | "cancelled" | "pending"
+  >("all");
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
@@ -52,6 +62,86 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchApplications();
   }, [fetchApplications]);
+
+  // Slot index -> Date, matching the 15-min slot convention used everywhere
+  // else (0 = 00:00, 40 = 10:00, 41 = 10:15 ... 95 = 23:45).
+  const slotToDate = (baseDate: Date, slot: number) => {
+    const d = new Date(baseDate);
+    d.setHours(0, 0, 0, 0);
+    d.setMinutes(slot * 15);
+    return d;
+  };
+  const formatSlotTime = (slot: number) => {
+    const totalMinutes = slot * 15;
+    const h24 = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const ampm = h24 >= 12 ? "PM" : "AM";
+    const h = h24 % 12 || 12;
+    return `${h < 10 ? "0" : ""}${h}:${m < 10 ? "0" : ""}${m} ${ampm}`;
+  };
+  const formatTimeRange = (slots: number[]) => {
+    if (!slots || slots.length === 0) return "TBD";
+    const startSlot = Math.min(...slots);
+    const endSlot = Math.max(...slots) + 1;
+    return `${formatSlotTime(startSlot)} - ${formatSlotTime(endSlot)}`;
+  };
+
+  // An appointment is "completed" once it's paid and its slot has fully
+  // passed; "upcoming" if paid and still ahead; independent of those,
+  // "cancelled" and "pending" are shown as their own statuses.
+  const computeAppointmentStatus = (apt: any): "completed" | "upcoming" | "cancelled" | "pending" => {
+    if (apt.status === "cancelled") return "cancelled";
+    if (apt.status === "pending") return "pending";
+    if (apt.status === "paid") {
+      const endSlot = Math.max(...(apt.time_slots || [0])) + 1;
+      const end = slotToDate(new Date(apt.appointment_date), endSlot);
+      return currentTime >= end ? "completed" : "upcoming";
+    }
+    return "pending";
+  };
+
+  const fetchAppointments = useCallback(async () => {
+    setIsLoadingAppointments(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.push("/");
+      return;
+    }
+    try {
+      const res = await fetch("/admin/appointments", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.status === 401 || res.status === 403) {
+        alert("Unauthorized Access. Your email is not registered as an Admin.");
+        router.push("/");
+        return;
+      }
+      if (!res.ok) throw new Error("Failed to fetch appointments");
+      const data = await res.json();
+      setAppointments(data.appointments || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoadingAppointments(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (activeTab === "appointments") fetchAppointments();
+  }, [activeTab, fetchAppointments]);
+
+  const appointmentCounts = {
+    all: appointments.length,
+    completed: appointments.filter((a) => computeAppointmentStatus(a) === "completed").length,
+    upcoming: appointments.filter((a) => computeAppointmentStatus(a) === "upcoming").length,
+    cancelled: appointments.filter((a) => computeAppointmentStatus(a) === "cancelled").length,
+    pending: appointments.filter((a) => computeAppointmentStatus(a) === "pending").length,
+  };
+
+  const filteredAppointments =
+    appointmentFilter === "all"
+      ? appointments
+      : appointments.filter((a) => computeAppointmentStatus(a) === appointmentFilter);
 
   const handleAccept = async (appId: string) => {
     setIsProcessing(appId);
@@ -125,12 +215,40 @@ export default function AdminDashboard() {
       <Navbar />
 
       <section className="mx-auto max-w-7xl px-6 pb-24 pt-32">
-        <div className="mb-12 border-b border-[#3A3A38]/10 pb-8">
+        <div className="mb-8 border-b border-[#3A3A38]/10 pb-8">
           <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#A65D47]">Admin Portal</p>
-          <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">Waitlist & Applications Engine</h1>
+          <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">
+            {activeTab === "applications" ? "Waitlist & Applications Engine" : "Appointments & Session Review"}
+          </h1>
         </div>
 
-        {isLoading ? (
+        <div className="mb-10 flex gap-2 border-b border-[#3A3A38]/10">
+          <button
+            type="button"
+            onClick={() => setActiveTab("applications")}
+            className={`px-5 py-3 text-xs font-semibold uppercase tracking-widest transition-colors ${
+              activeTab === "applications"
+                ? "border-b-2 border-[#2C4C5B] text-[#2C4C5B]"
+                : "text-[#3A3A38]/50 hover:text-[#3A3A38]"
+            }`}
+          >
+            Applications
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("appointments")}
+            className={`px-5 py-3 text-xs font-semibold uppercase tracking-widest transition-colors ${
+              activeTab === "appointments"
+                ? "border-b-2 border-[#2C4C5B] text-[#2C4C5B]"
+                : "text-[#3A3A38]/50 hover:text-[#3A3A38]"
+            }`}
+          >
+            Appointments
+          </button>
+        </div>
+
+        {activeTab === "applications" ? (
+        isLoading ? (
           <p className="animate-pulse tracking-widest text-[#88B7B5]">Verifying Secure Access...</p>
         ) : applications.length === 0 ? (
           <div className="rounded-3xl border border-[#3A3A38]/10 bg-white/50 py-20 text-center">
@@ -208,6 +326,108 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
+          </div>
+        )
+        ) : (
+          <div>
+            {/* Filter tabs */}
+            <div className="mb-8 flex flex-wrap gap-2">
+              {(["all", "completed", "upcoming", "cancelled", "pending"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setAppointmentFilter(f)}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest border transition ${
+                    appointmentFilter === f
+                      ? "bg-[#2C4C5B] text-white border-[#2C4C5B]"
+                      : "bg-white text-[#3A3A38]/70 border-[#3A3A38]/10 hover:border-[#2C4C5B]/40"
+                  }`}
+                >
+                  {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)} ({appointmentCounts[f]})
+                </button>
+              ))}
+            </div>
+
+            {isLoadingAppointments ? (
+              <p className="animate-pulse tracking-widest text-[#88B7B5]">Loading appointments...</p>
+            ) : filteredAppointments.length === 0 ? (
+              <div className="rounded-3xl border border-[#3A3A38]/10 bg-white/50 py-20 text-center">
+                <h3 className="font-serif text-2xl text-[#3A3A38]">No appointments in this view</h3>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredAppointments.map((apt) => {
+                  const computed = computeAppointmentStatus(apt);
+                  return (
+                    <div key={apt.id} className="flex flex-col rounded-3xl border border-[#3A3A38]/10 bg-white p-6 shadow-sm">
+                      <div className="mb-4 flex items-start justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#88B7B5]">
+                            {new Date(apt.appointment_date).toLocaleDateString("en-US", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                          <h3 className="font-serif text-lg font-medium text-[#2C4C5B] leading-tight">
+                            {formatTimeRange(apt.time_slots)}
+                          </h3>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest
+                            ${computed === "completed" ? "bg-green-100 text-green-700" : ""}
+                            ${computed === "upcoming" ? "bg-blue-100 text-blue-700" : ""}
+                            ${computed === "cancelled" ? "bg-gray-200 text-gray-500 line-through" : ""}
+                            ${computed === "pending" ? "bg-yellow-100 text-yellow-700" : ""}
+                          `}
+                        >
+                          {computed}
+                        </span>
+                      </div>
+
+                      <div className="mb-4 flex-1 rounded-2xl bg-[#FBF8F2] p-4 text-sm">
+                        <p><strong className="text-[#3A3A38]">Patient:</strong> {apt.patient_name}</p>
+                        <p className="text-xs text-[#3A3A38]/60">{apt.patient_email}</p>
+                        <p className="mt-2"><strong className="text-[#3A3A38]">Psychologist:</strong> {apt.counselor_name}</p>
+                        <p className="text-xs text-[#3A3A38]/60">{apt.counselor_email}</p>
+                        <p className="mt-2 text-xs uppercase tracking-widest text-[#3A3A38]/50">
+                          {apt.modality} {apt.total_price ? `· ₹${apt.total_price}` : ""}
+                        </p>
+                      </div>
+
+                      {computed === "completed" && (
+                        <div className="border-t border-[#3A3A38]/10 pt-4">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+                            Patient Feedback
+                          </p>
+                          {apt.feedback ? (
+                            <div className="rounded-xl bg-[#4F6F52]/5 p-3">
+                              <div className="mb-1 flex items-center gap-1">
+                                {Array.from({ length: 5 }, (_, i) => (
+                                  <span key={i} className={i < apt.feedback.rating ? "text-[#4F6F52]" : "text-[#3A3A38]/20"}>
+                                    ★
+                                  </span>
+                                ))}
+                                <span className="ml-2 text-xs text-[#3A3A38]/60">
+                                  {apt.feedback.wants_to_continue ? "Wants to continue" : "Not continuing"}
+                                </span>
+                              </div>
+                              {apt.feedback.feedback_text && (
+                                <p className="text-xs italic leading-relaxed text-[#3A3A38]/80">
+                                  &quot;{apt.feedback.feedback_text}&quot;
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-[#3A3A38]/50 italic">No feedback submitted yet.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </section>

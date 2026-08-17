@@ -1,468 +1,873 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import { supabase } from "../../lib/supabase";
-import { client } from "../../lib/sanity";
+import { client, urlFor } from "../../lib/sanity";
 import Navbar from "../../components/Navbar";
 
-export default function CounselorPortal() {
+interface Counselor {
+  _id: string;
+  name: string;
+  email: string;
+  designation: string;
+  speciality?: string; 
+  experience: string;
+  sessionsCompleted?: string;
+  languages: string;
+  mode: string;
+  fees: number;
+  bio: string;
+  image: any;
+  shiftStart?: number;
+  shiftEnd?: number;
+  blockedDates?: string[];
+}
+
+const formatTime = (slot: number) => {
+  const totalMinutes = slot * 15;
+  const h24 = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  const ampm = h24 >= 12 ? "PM" : "AM";
+  const h = h24 % 12 || 12;
+  return `${h < 10 ? "0" : ""}${h}:${m < 10 ? "0" : ""}${m} ${ampm}`;
+};
+const timeValueToSlot = (value: string) => {
+  const [h, m] = value.split(":").map(Number);
+  return Math.round((h * 60 + m) / 15);
+};
+
+function MatchPageInner() {
   const router = useRouter();
-  const [counselor, setCounselor] = useState<any>(null);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [sharedResultsByPatient, setSharedResultsByPatient] = useState<Record<string, any[]>>({});
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session");
+  const paymentFlag = searchParams.get("payment"); // 'cancelled' | 'error' | null
 
-  // Homework State
-  const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
-  const [homeworkText, setHomeworkText] = useState("");
-  const [homeworkFiles, setHomeworkFiles] = useState<File[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [fileErrorMsg, setFileErrorMsg] = useState("");
+  // "Continue with this psychologist?" flows (from post-session feedback,
+  // or the "Book a Session" shortcut on the dashboard). rebook=1 + counselor
+  // skips the intake/matching step entirely and jumps straight to
+  // scheduling with that one psychologist. reselect=1 re-opens an already
+  // "converted" intake session so its top-3 list can be picked from again.
+  const rebookCounselorId = searchParams.get("counselor");
+  const isRebook = searchParams.get("rebook") === "1" && !!rebookCounselorId;
+  const isReselect = searchParams.get("reselect") === "1";
 
-  // Calendar blocking state: Set of "date|hour" keys currently blocked.
-  const [blockedSlotKeys, setBlockedSlotKeys] = useState<Set<string>>(new Set());
-  const [togglingKey, setTogglingKey] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(true);
+  const [intakeSession, setIntakeSession] = useState<any>(null);
+  const [rebookUser, setRebookUser] = useState<any>(null);
+  const [matchedCounselors, setMatchedCounselors] = useState<Counselor[]>([]);
+  const [matchReasoning, setMatchReasoning] = useState<Record<string, string>>({});
 
-  const authHeader = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return { Authorization: `Bearer ${session?.access_token}` };
-  };
+  const [selectedCounselorId, setSelectedCounselorId] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<number[]>([]);
+  // Type-a-time-range alternative to tapping the grid.
+  const [rangeStart, setRangeStart] = useState<string>("");
+  const [rangeEnd, setRangeEnd] = useState<string>("");
+  // Recurring weekly rules for the currently selected counselor: whole
+  // weekdays they're always off, and specific weekday+15-min-slot combos.
+  const [recurringWholeDays, setRecurringWholeDays] = useState<Set<number>>(new Set());
+  const [recurringSlots, setRecurringSlots] = useState<Set<string>>(new Set()); // "weekday|slot"
+  const [modality, setModality] = useState<string>("online");
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+
+  // Coupon state. couponStatus reflects the last "Apply" click, purely for
+  // showing a live preview of the discount - it is NOT what gets trusted at
+  // checkout. handleCheckout always re-validates whatever is currently in
+  // couponInput itself, so an edited-but-not-reapplied code can never slip
+  // through, and the /api/payu/hash endpoint re-validates again server-side
+  // regardless of what the client sends.
+  const [couponInput, setCouponInput] = useState("");
+  const [couponStatus, setCouponStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
+  const [couponError, setCouponError] = useState("");
+  const [appliedDiscountPercent, setAppliedDiscountPercent] = useState(0);
+
+  const tomorrowObj = new Date();
+  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+  const minDate = new Date(tomorrowObj.getTime() - tomorrowObj.getTimezoneOffset() * 60000)
+    .toISOString()
+    .split("T")[0];
+  const maxDateObj = new Date(tomorrowObj);
+  maxDateObj.setDate(tomorrowObj.getDate() + 6);
+  const maxDate = new Date(maxDateObj.getTime() - maxDateObj.getTimezoneOffset() * 60000)
+    .toISOString()
+    .split("T")[0];
 
   useEffect(() => {
-    const fetchCounselorData = async () => {
-      // 1. Check Auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.email) {
-        router.push("/login");
+    const init = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        const redirectTarget = isRebook
+          ? `/book/match?counselor=${rebookCounselorId}&rebook=1`
+          : `/book/match?session=${sessionId}`;
+        router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
         return;
       }
 
-      const userEmail = session.user.email.toLowerCase().trim(); // Forces strict formatting
+      // ── Rebook: "continue with this psychologist" ──────────────────
+      // Skip intake/matching entirely. Fetch just that one counselor and
+      // go straight to the scheduler, using the logged-in user's own info.
+      if (isRebook) {
+        const counselor: Counselor | null = await client.fetch(
+          `*[_type == "counselor" && _id == $id][0]`,
+          { id: rebookCounselorId },
+          { cache: "no-store" }
+        );
 
-      // 2. Verify Counselor in Sanity (Bypasses Cache for real-time checks)
-      const sanityCounselor = await client.fetch(
-        `*[_type == "counselor" && email == $email][0]`,
-        { email: userEmail },
-        { cache: "no-store" } // Forces Next.js to ignore cached data
-      );
+        if (!counselor) {
+          router.push("/book");
+          return;
+        }
 
-      if (!sanityCounselor) {
-        alert(`Access Denied: ${userEmail} is not registered as a Psychologist.`);
-        router.push("/dashboard");
+        setRebookUser(user);
+        setMatchedCounselors([counselor]);
+        setSelectedCounselorId(counselor._id);
+        setModality(counselor.mode === "in-person" ? "in-person" : "online");
+        setIsResolving(false);
+        setTimeout(() => {
+          document.getElementById("scheduler")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
         return;
       }
-      setCounselor(sanityCounselor);
 
-      // 3. Fetch their Patients' Appointments
-      const { data: apts, error } = await supabase
-        .from("appointments")
+      // ── Normal / reselect: resolve an intake session ────────────────
+      if (!sessionId) {
+        router.push("/book/intake");
+        return;
+      }
+
+      const { data: session, error } = await supabase
+        .from("intake_sessions")
         .select("*")
-        .eq("counselor_email", userEmail)
-        .eq("status", "paid") // STRICTLY ONLY PAID APPOINTMENTS
-        .order("appointment_date", { ascending: true });
+        .eq("id", sessionId)
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (!error && apts) setAppointments(apts);
-
-      // 4. Fetch this counselor's currently blocked slots
-      try {
-        const headers = await authHeader();
-        const res = await fetch("/api/counselor/blocked-slots", { headers });
-        if (res.ok) {
-          const { blockedSlots } = await res.json();
-          setBlockedSlotKeys(new Set((blockedSlots || []).map((b: any) => `${b.slot_date}|${b.hour}`)));
-        }
-      } catch (err) {
-        console.error("Failed to load blocked slots:", err);
+      if (error || !session) {
+        router.push("/book/intake");
+        return;
       }
 
-      // 5. Fetch any test/tool results clients have chosen to share with them
-      try {
-        const headers = await authHeader();
-        const res = await fetch("/api/tests/shared-with-me", { headers });
-        if (res.ok) {
-          const { sharedByPatient } = await res.json();
-          setSharedResultsByPatient(sharedByPatient || {});
-        }
-      } catch (err) {
-        console.error("Failed to load shared test results:", err);
+      if (session.status === "draft") {
+        router.replace(`/book/intake?session=${sessionId}`);
+        return;
+      }
+      // A "converted" session normally means they already booked from it —
+      // send them to the dashboard, UNLESS they're here to reselect a
+      // different psychologist from their original top-3 after feedback.
+      if (session.status === "converted" && !isReselect) {
+        router.replace("/dashboard");
+        return;
       }
 
-      setIsLoading(false);
+      setIntakeSession(session);
+      setMatchReasoning(session.match_reasoning || {});
+
+      if (session.selected_counselor_id && !isReselect) {
+        setSelectedCounselorId(session.selected_counselor_id);
+      }
+
+      const ids: string[] = session.matched_counselor_ids || [];
+      if (ids.length > 0) {
+        const fetched: Counselor[] = await client.fetch(
+          `*[_type == "counselor" && _id in $ids]`,
+          { ids }
+        );
+        // Preserve the ranked order returned by the matcher, not Sanity's order.
+        const ordered = ids
+          .map((id) => fetched.find((c) => c._id === id))
+          .filter(Boolean) as Counselor[];
+        setMatchedCounselors(ordered);
+      }
+
+      setIsResolving(false);
     };
 
-    fetchCounselorData();
-  }, [router]);
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, isRebook, rebookCounselorId, isReselect]);
 
-  // Helper: Format hours into readable time
-  const formatTime = (hour: number) => {
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const h = hour % 12 || 12;
-    return `${h < 10 ? '0' : ''}${h}:00 ${ampm}`;
-  };
-
-  // Helper: Calculate Next 6 Days Availability
-  const getNext6Days = () => {
-    if (!counselor) return [];
-    const days = [];
-    const shiftStart = counselor.shiftStart || 12; // Default 12 PM
-    const shiftEnd = counselor.shiftEnd || 20;     // Default 8 PM
-    
-    for (let i = 1; i <= 6; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      const dateStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
-      
-      // Find all booked hours for this specific day
-      const bookedHours = appointments
-        .filter(apt => apt.appointment_date === dateStr)
-        .flatMap(apt => apt.time_slots);
-
-      const isBlocked = counselor.blockedDates?.includes(dateStr);
-
-      days.push({
-        date: dateStr,
-        displayDate: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-        bookedHours,
-        isBlocked,
-        shiftStart,
-        shiftEnd
-      });
+  // Double-booking prevention sync (same as the old booking form), plus
+  // slots the counselor has manually blocked off.
+  useEffect(() => {
+  const fetchBookedSlots = async () => {
+    if (!selectedCounselorId || !selectedDate) {
+      setBookedSlots([]);
+      return;
     }
-    return days;
+
+    const [
+      { data: rpcData, error: rpcError }, 
+      { data: blocked }
+    ] = await Promise.all([
+      // 1. Fetch patient bookings securely via RPC
+      supabase.rpc("get_counselor_booked_slots", {
+        p_counselor_id: selectedCounselorId,
+        p_appointment_date: selectedDate,
+      }),
+      // 2. Fetch counselor's manual blocks
+      supabase
+        .from("blocked_slots")
+        .select("slot_start")
+        .eq("counselor_id", selectedCounselorId)
+        .eq("slot_date", selectedDate),
+    ]);
+
+    if (rpcError) {
+      console.error("Failed to fetch availability:", rpcError);
+    }
+
+    // Extract the flat quarter-hour slots from both sources
+    const bookedFromAppointments = rpcData ? rpcData.map((row: any) => row.booked_slot) : [];
+    const blockedFromCounselor = blocked ? blocked.map((b: any) => b.slot_start) : [];
+
+    // Merge and deduplicate
+    setBookedSlots([...new Set([...bookedFromAppointments, ...blockedFromCounselor])]);
   };
 
-  const toggleSlotBlock = async (dateStr: string, hour: number, isCurrentlyBlocked: boolean) => {
-    const key = `${dateStr}|${hour}`;
-    setTogglingKey(key);
-    try {
-      const headers = await authHeader();
-      const res = await fetch("/api/counselor/blocked-slots", {
-        method: isCurrentlyBlocked ? "DELETE" : "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ date: dateStr, hour }),
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        alert(result.error || "Failed to update slot.");
+  fetchBookedSlots();
+}, [selectedCounselorId, selectedDate]);
+
+  // Fetch this counselor's recurring weekly availability rules once per
+  // counselor selection (not per date, since the rule is weekly-repeating).
+  useEffect(() => {
+    const fetchRecurringBlocks = async () => {
+      if (!selectedCounselorId) {
+        setRecurringWholeDays(new Set());
+        setRecurringSlots(new Set());
         return;
       }
-      setBlockedSlotKeys((prev) => {
-        const next = new Set(prev);
-        if (isCurrentlyBlocked) next.delete(key);
-        else next.add(key);
-        return next;
+      const { data, error: recurringError } = await supabase
+        .from("counselor_recurring_blocks")
+        .select("weekday, slot_start")
+        .eq("counselor_id", selectedCounselorId);
+
+      if (recurringError) {
+        console.error("Failed to fetch recurring availability:", recurringError);
+        return;
+      }
+
+      const wholeDays = new Set<number>();
+      const slotKeys = new Set<string>();
+      (data || []).forEach((r: any) => {
+        if (r.slot_start === null || r.slot_start === undefined) wholeDays.add(r.weekday);
+        else slotKeys.add(`${r.weekday}|${r.slot_start}`);
       });
-    } catch (err) {
-      alert("A network error occurred. Please try again.");
-    } finally {
-      setTogglingKey(null);
-    }
+      setRecurringWholeDays(wholeDays);
+      setRecurringSlots(slotKeys);
+    };
+
+    fetchRecurringBlocks();
+  }, [selectedCounselorId]);
+
+  const selectedCounselor = matchedCounselors.find((c) => c._id === selectedCounselorId);
+  // Each selected slot is 15 minutes, i.e. a quarter of the hourly fee.
+  const totalPrice = selectedCounselor ? selectedCounselor.fees * selectedSlots.length * 0.25 : 0;
+  const discountedTotal = appliedDiscountPercent > 0
+    ? Math.round((totalPrice - totalPrice * (appliedDiscountPercent / 100)) * 100) / 100
+    : totalPrice;
+  const selectedWeekday = selectedDate ? new Date(selectedDate + "T00:00:00").getDay() : null;
+  const isDateBlocked =
+    !!selectedCounselor?.blockedDates?.includes(selectedDate) ||
+    (selectedWeekday !== null && recurringWholeDays.has(selectedWeekday));
+
+  const availableHours: number[] = [];
+  if (selectedCounselor && !isDateBlocked) {
+    const start = (selectedCounselor.shiftStart || 12) * 4;
+    const end = (selectedCounselor.shiftEnd || 20) * 4;
+    for (let i = start; i < end; i++) availableHours.push(i);
+  }
+
+  // Recurring weekly slot-blocks apply on top of one-off bookedSlots for
+  // whichever weekday the selected date falls on.
+  const effectiveBookedSlots =
+    selectedWeekday !== null
+      ? [
+          ...bookedSlots,
+          ...Array.from(recurringSlots)
+            .filter((k) => k.startsWith(`${selectedWeekday}|`))
+            .map((k) => parseInt(k.split("|")[1], 10)),
+        ]
+      : bookedSlots;
+
+  const toggleTimeSlot = (slot: number) => {
+    setSelectedSlots((prev) =>
+      prev.includes(slot) ? prev.filter((s) => s !== slot) : [...prev, slot].sort((a, b) => a - b)
+    );
   };
 
-  const handleHomeworkFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
-    const chosen = Array.from(e.target.files || []);
-    setFileErrorMsg("");
-    if (chosen.length > 2) {
-      setFileErrorMsg("You can attach at most 2 files.");
+  // Type-a-time-range: pick a start and end time, select every 15-min slot
+  // in between (as long as none of them are taken).
+  const applyTimeRange = () => {
+    if (!rangeStart || !rangeEnd) return;
+    const startSlot = timeValueToSlot(rangeStart);
+    const endSlot = timeValueToSlot(rangeEnd);
+    if (endSlot <= startSlot) {
+      alert("End time must be after start time.");
       return;
     }
-    const tooBig = chosen.find((f) => f.size > 5 * 1024 * 1024);
-    if (tooBig) {
-      setFileErrorMsg(`"${tooBig.name}" is over 5MB. Please choose a smaller file.`);
+    const range: number[] = [];
+    for (let s = startSlot; s < endSlot; s++) range.push(s);
+
+    const outOfBounds = range.some((s) => !availableHours.includes(s));
+    if (outOfBounds) {
+      alert("That range falls outside the psychologist's working hours.");
       return;
     }
-    setHomeworkFiles(chosen);
+    const conflict = range.some((s) => effectiveBookedSlots.includes(s));
+    if (conflict) {
+      alert("Part of that range is already taken. Please pick a different time.");
+      return;
+    }
+    setSelectedSlots(range);
   };
 
-  const saveHomework = async (aptId: string) => {
-    setIsSaving(true);
-    setFileErrorMsg("");
+  const chooseCounselor = async (id: string) => {
+    setSelectedCounselorId(id);
+    setSelectedDate("");
+    setSelectedSlots([]);
+    setRangeStart("");
+    setRangeEnd("");
+    const counselor = matchedCounselors.find((c) => c._id === id);
+    if (counselor) setModality(counselor.mode === "in-person" ? "in-person" : "online");
+
+    if (sessionId) {
+      await supabase
+        .from("intake_sessions")
+        .update({
+          selected_counselor_id: id,
+          status: "selected",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", sessionId);
+    }
+
+    setTimeout(() => {
+      document.getElementById("scheduler")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
+
+  // Live preview only - lets the user see "✓ 15% off applied" and the
+  // discounted price before they hit checkout. Not trusted for the actual
+  // charge; see the re-validation inside handleCheckout below.
+  const applyCoupon = async () => {
+    const patientEmail = intakeSession?.email || rebookUser?.email;
+    if (!couponInput.trim() || !patientEmail) return;
+
+    setCouponStatus("checking");
+    setCouponError("");
+
     try {
-      const headers = await authHeader();
-      const formData = new FormData();
-      formData.append("appointmentId", aptId);
-      formData.append("homework", homeworkText);
-      homeworkFiles.forEach((f) => formData.append("files", f));
-
-      const res = await fetch("/api/homework/assign", {
+      const res = await fetch("/api/coupons/validate", {
         method: "POST",
-        headers,
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim(), patient_email: patientEmail }),
       });
       const result = await res.json();
 
-      if (res.ok) {
-        setAppointments((prev) =>
-          prev.map((apt) =>
-            apt.id === aptId ? { ...apt, homework: homeworkText, homework_files: result.homework_files } : apt
-          )
-        );
-        setEditingHomeworkId(null);
-        setHomeworkText("");
-        setHomeworkFiles([]);
+      if (result.valid) {
+        setAppliedDiscountPercent(result.coupon.discount_percent);
+        setCouponStatus("valid");
       } else {
-        alert(result.error || "Failed to save homework. Please try again.");
+        setAppliedDiscountPercent(0);
+        setCouponStatus("invalid");
+        setCouponError(result.error || "Invalid coupon.");
       }
-    } catch (err) {
-      alert("A network error occurred. Please try again.");
-    } finally {
-      setIsSaving(false);
+    } catch {
+      setAppliedDiscountPercent(0);
+      setCouponStatus("invalid");
+      setCouponError("Something went wrong checking that code.");
     }
   };
+
+  const handleCheckout = async () => {
+    if ((!intakeSession && !rebookUser) || !selectedCounselor || !selectedDate || selectedSlots.length === 0) {
+      setStatusMessage("Please complete your selection.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage("Securing your slot...");
+
+    const patientName = intakeSession?.full_name || rebookUser?.user_metadata?.full_name || rebookUser?.email;
+    const patientEmail = intakeSession?.email || rebookUser?.email;
+    const patientNotes = intakeSession?.additional_notes || null;
+    const patientPhone = intakeSession?.phone || rebookUser?.user_metadata?.phone || "";
+    const patientPhoneExt = intakeSession?.phone_extension || "";
+
+    // Re-validate whatever is currently typed in the coupon field right now
+    // - not the stale couponStatus from a previous "Apply" click. This
+    // covers the case where someone applied a code, then edited it (or
+    // typed a new one) without clicking Apply again before paying.
+    // /api/payu/hash re-validates this again server-side regardless, so
+    // this call is purely to give an accurate error message pre-payment.
+    const trimmedCoupon = couponInput.trim();
+    let couponCodeForCheckout: string | undefined = undefined;
+
+    if (trimmedCoupon) {
+      try {
+        const couponRes = await fetch("/api/coupons/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: trimmedCoupon, patient_email: patientEmail }),
+        });
+        const couponResult = await couponRes.json();
+
+        if (!couponResult.valid) {
+          setCouponStatus("invalid");
+          setCouponError(couponResult.error || "Invalid coupon.");
+          setStatusMessage("Please fix your coupon code before continuing, or clear it to pay full price.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        couponCodeForCheckout = trimmedCoupon;
+        setAppliedDiscountPercent(couponResult.coupon.discount_percent);
+        setCouponStatus("valid");
+      } catch {
+        setCouponStatus("invalid");
+        setCouponError("Couldn't verify your coupon just now. Please try again.");
+        setStatusMessage("Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    const payload = {
+      patient_name: patientName,
+      patient_email: patientEmail,
+      patient_notes: patientNotes,
+      counselor_id: selectedCounselor._id,
+      counselor_email: selectedCounselor.email,
+      counselor_name: selectedCounselor.name,
+      appointment_date: selectedDate,
+      time_slots: selectedSlots,
+      modality,
+      total_price: totalPrice,
+      payment_gateway: "payu",
+      status: "pending",
+      intake_session_id: sessionId || null,
+    };
+
+    const { data: dbData, error: dbError } = await supabase
+      .from("appointments")
+      .insert([payload])
+      .select()
+      .single();
+
+    if (dbError) {
+      setStatusMessage("Something went wrong saving the appointment.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    setStatusMessage("Redirecting to PayU Secure Checkout...");
+
+    try {
+      const res = await fetch("/api/payu/hash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstname: patientName,
+          email: patientEmail,
+          productinfo: `Session with ${selectedCounselor.name}`,
+          counselor_id: selectedCounselor._id,
+          slots_count: selectedSlots.length,
+          appointment_id: dbData.id,
+          coupon_code: couponCodeForCheckout,
+        }),
+      });
+
+      const { hash, txnid, key, amount, error: hashError } = await res.json();
+      if (!hash) throw new Error(hashError || "No Hash Generated");
+
+      const form = document.createElement("form");
+      form.setAttribute("method", "POST");
+      form.setAttribute("action", "https://secure.payu.in/_payment");
+
+      const appendInput = (name: string, value: any) => {
+        const input = document.createElement("input");
+        input.setAttribute("type", "hidden");
+        input.setAttribute("name", name);
+        input.setAttribute("value", value ?? "");
+        form.appendChild(input);
+      };
+
+      appendInput("key", key);
+      appendInput("txnid", txnid);
+      appendInput("amount", amount);
+      appendInput("productinfo", `Session with ${selectedCounselor.name}`);
+      appendInput("firstname", patientName);
+      appendInput("email", patientEmail);
+      // Real phone number from the intake form, with the extension appended
+      // if one was given (this used to be a hardcoded placeholder).
+      appendInput("phone", patientPhoneExt ? `${patientPhone}x${patientPhoneExt}` : patientPhone);
+      appendInput("udf1", dbData.id);
+      appendInput("surl", `${window.location.origin}/api/payu/response`);
+      appendInput("furl", `${window.location.origin}/api/payu/response`);
+      // Hide EMI as a payment option on the PayU checkout page.
+      appendInput("drop_category", "EMI");
+      appendInput("hash", hash);
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err) {
+      setStatusMessage("Error launching PayU.");
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isResolving) {
+    return (
+      <main className="min-h-screen bg-[#FBF8F2]">
+        <Navbar />
+        <div className="flex min-h-screen items-center justify-center">
+          <p className="animate-pulse text-sm font-medium uppercase tracking-[0.35em] text-[#88B7B5]">
+            Loading Your Matches...
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
       <Navbar />
+      <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-32 sm:px-12">
+        {!isRebook && (
+          <div className="mb-4">
+            <Link
+              href={`/book/intake?session=${sessionId}`}
+              className="group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
+            >
+              <span className="transition-transform group-hover:-translate-x-1">←</span> Edit Your Answers
+            </Link>
+          </div>
+        )}
 
-      <section className="mx-auto max-w-6xl px-6 pb-24 pt-32">
-        <div className="mb-12 border-b border-[#3A3A38]/10 pb-8">
-          <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#4F6F52]">Psychologist Portal</p>
-          <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">Welcome, {counselor?.name || "Professional"}</h1>
+        <div className="mb-12 text-center">
+          <p className="mb-3 text-sm font-medium uppercase tracking-[0.35em] text-black">
+            {isRebook ? "Book Again" : "Your Matches"}
+          </p>
+          <h1 className="font-serif text-3xl font-medium text-black sm:text-4xl">
+            {isRebook ? `Continue your care with ${matchedCounselors[0]?.name || "your psychologist"}` : "We think these 3 can help you most"}
+          </h1>
+          <p className="mt-4 text-sm text-[#3A3A38]/70">
+            {isRebook
+              ? "Pick a new date and time to schedule your next session."
+              : "Based on what you shared, including at least one Clinical Psychologist."}
+          </p>
         </div>
 
-        {isLoading ? (
-          <p className="animate-pulse tracking-widest text-[#88B7B5]">Loading securely...</p>
-        ) : (
-          <div className="flex flex-col gap-16">
-            
-            {/* 1. SCHEDULE OVERVIEW (NEXT 6 DAYS) */}
-            <div>
-              <h2 className="font-serif text-2xl text-[#2C4C5B] mb-6">Your Availability (Next 6 Days)</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {getNext6Days().map((day, idx) => {
-                  const totalSlots = day.shiftEnd - day.shiftStart;
-                  const availableSlots = totalSlots - day.bookedHours.length;
+        {paymentFlag === "cancelled" && (
+          <div className="mx-auto mb-10 max-w-2xl rounded-xl border border-[#A65D47]/30 bg-[#A65D47]/10 p-4 text-center text-sm text-[#A65D47]">
+            Your payment was cancelled. No amount was charged — pick a time again below whenever you&apos;re ready.
+          </div>
+        )}
+        {paymentFlag === "error" && (
+          <div className="mx-auto mb-10 max-w-2xl rounded-xl border border-[#A65D47]/30 bg-[#A65D47]/10 p-4 text-center text-sm text-[#A65D47]">
+            Something went wrong confirming your payment. Please try again — you have not been charged.
+          </div>
+        )}
 
-                  return (
-                    <div key={idx} className="bg-white rounded-3xl p-6 border border-[#3A3A38]/10 shadow-sm">
-                      <p className="font-bold text-[#2C4C5B] mb-1">{day.displayDate}</p>
-                      
-                      {day.isBlocked ? (
-                        <p className="text-sm font-semibold text-[#A65D47] mt-4 uppercase tracking-widest">Marked as Unavailable</p>
-                      ) : (
-                        <>
-                          <p className="text-xs uppercase tracking-widest text-[#3A3A38]/60 mb-4 border-b border-[#3A3A38]/10 pb-2">
-                            {availableSlots} slots open · tap a slot to block/unblock it
-                          </p>
-                          <div className="grid grid-cols-3 gap-2">
-                            {Array.from({ length: totalSlots }, (_, i) => day.shiftStart + i).map(hour => {
-                              const isBooked = day.bookedHours.includes(hour);
-                              const slotKey = `${day.date}|${hour}`;
-                              const isBlocked = blockedSlotKeys.has(slotKey);
-                              const isToggling = togglingKey === slotKey;
-                              return (
-                                <button
-                                  key={hour}
-                                  type="button"
-                                  disabled={isBooked || isToggling}
-                                  onClick={() => toggleSlotBlock(day.date, hour, isBlocked)}
-                                  title={isBooked ? "Already booked" : isBlocked ? "Click to unblock" : "Click to block"}
-                                  className={`text-center py-2 rounded-lg text-[10px] font-semibold border transition ${
-                                    isBooked
-                                      ? 'bg-[#A65D47]/10 text-[#A65D47] border-[#A65D47]/20 line-through cursor-not-allowed'
-                                      : isBlocked
-                                      ? 'bg-[#3A3A38]/10 text-[#3A3A38]/50 border-[#3A3A38]/20 line-through cursor-pointer hover:bg-[#3A3A38]/15'
-                                      : 'bg-[#4F6F52]/10 text-[#4F6F52] border-[#4F6F52]/20 cursor-pointer hover:bg-[#4F6F52]/20'
-                                  } ${isToggling ? 'opacity-50' : ''}`}
-                                >
-                                  {formatTime(hour)}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
+        <div className={`grid grid-cols-1 gap-6 ${isRebook ? "mx-auto max-w-sm" : "sm:grid-cols-3"}`}>
+          {matchedCounselors.map((c) => {
+            const isSelected = selectedCounselorId === c._id;
+            const isClinical = (c.designation || "").toLowerCase().includes("clinical");
+            return (
+              <div
+                key={c._id}
+                className={`flex flex-col overflow-hidden rounded-3xl border bg-white/60 shadow-sm transition-all ${
+                  isSelected ? "border-[#4F6F52] ring-2 ring-[#4F6F52]" : "border-[#3A3A38]/10"
+                }`}
+              >
+                <div className="relative h-48 w-full bg-[#88B7B5]/20">
+                  {c.image && (
+                    <Image src={urlFor(c.image).url()} alt={c.name} fill className="object-contain p-2" />
+                  )}
+                  {isClinical && (
+                    <span className="absolute left-3 top-3 rounded-full bg-[#2C4C5B] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+                      Clinical
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col p-6">
+                  <h4 className="font-serif text-xl font-medium text-[#2C4C5B]">{c.name}</h4>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#4F6F52]">
+                    {c.designation}
+                  </p>
+                  {c.speciality && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {c.speciality.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag, idx) => (
+                        <span key={idx} className="inline-block rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
-                  );
-                })}
+                  )}
+                  <p className="mt-3 text-xs leading-relaxed text-[#3A3A38]/70 line-clamp-4">{c.bio}</p>
+                  {matchReasoning[c._id] && (
+                    <p className="mt-3 rounded-lg bg-[#F6D86B]/15 px-3 py-2 text-[11px] italic text-[#8E7A65]">
+                      {matchReasoning[c._id]}
+                    </p>
+                  )}
+
+                  <div className="mt-6 flex flex-col gap-3 border-t border-[#3A3A38]/10 pt-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-[#4F6F52]">₹{c.fees}/hr</p>
+                      <Link
+                        href={`/counselors/${c._id}`}
+                        target="_blank"
+                        className="text-xs font-semibold uppercase tracking-wider text-[#2C4C5B] underline"
+                      >
+                        View Profile
+                      </Link>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => chooseCounselor(c._id)}
+                      className={`w-full rounded-full px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                        isSelected
+                          ? "bg-[#4F6F52] text-white"
+                          : "border border-[#2C4C5B]/20 text-[#2C4C5B] hover:bg-[#2C4C5B] hover:text-white"
+                      }`}
+                    >
+                      {isSelected ? "Selected" : "Choose This Psychologist"}
+                    </button>
+                  </div>
+                </div>
               </div>
+            );
+          })}
+        </div>
+
+        {selectedCounselor && (
+          <div
+            id="scheduler"
+            className="mx-auto mt-16 w-full max-w-4xl overflow-hidden rounded-3xl border border-[#88B7B5]/30 bg-white/60 shadow-[0_8px_40px_rgba(44,76,91,0.05)] backdrop-blur-xl"
+          >
+            <div className="border-b border-[#88B7B5]/20 bg-[#88B7B5]/10 px-8 py-8 sm:px-12">
+              <h2 className="font-serif text-2xl font-medium text-[#2C4C5B]">
+                Schedule with {selectedCounselor.name}
+              </h2>
+              <p className="mt-2 text-sm text-[#3A3A38]/70">Pick a date and the time slots that work for you.</p>
             </div>
 
-            {/* 2. PATIENT APPOINTMENTS & HOMEWORK ENGINE */}
-            <div>
-              <h2 className="font-serif text-2xl text-[#2C4C5B] mb-6">Client Roster & Homework</h2>
-              {appointments.length === 0 ? (
-                <div className="bg-white rounded-3xl p-10 text-center border border-[#3A3A38]/10">
-                  <p className="text-[#3A3A38]/60">No client sessions booked right now.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {appointments.map(apt => (
-                    <div key={apt.id} className="flex flex-col lg:flex-row gap-6 bg-white rounded-3xl p-8 border border-[#3A3A38]/10 shadow-sm">
-                      
-                      {/* Patient Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="bg-[#2C4C5B]/10 text-[#2C4C5B] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-                            {apt.modality}
-                          </span>
-                          <span className="text-xs font-semibold text-[#88B7B5]">{apt.status}</span>
-                        </div>
-                        <h3 className="font-serif text-xl font-medium text-[#2C4C5B] mb-1">{apt.patient_name}</h3>
-                        <p className="text-sm text-[#3A3A38]/70 mb-4">{apt.patient_email}</p>
-                        
-                        <div className="bg-[#FBF8F2] p-4 rounded-xl text-sm border border-[#3A3A38]/5">
-                          <p><strong>Date:</strong> {apt.appointment_date}</p>
-                          <p className="mt-1"><strong>Time:</strong> {formatTime(Math.min(...apt.time_slots))} - {formatTime(Math.max(...apt.time_slots) + 1)}</p>
-                          {apt.patient_notes && (
-                            <div className="mt-3 pt-3 border-t border-[#3A3A38]/10">
-                              <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1">Client Notes:</p>
-                              <p className="italic text-[#3A3A38]/80">{apt.patient_notes}</p>
-                            </div>
-                          )}
-                        </div>
+            <div className="flex flex-col gap-10 px-8 py-10 sm:px-12">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+                  Select Date (From Tomorrow)
+                </label>
+                <input
+                  type="date"
+                  min={minDate}
+                  max={maxDate}
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setSelectedSlots([]);
+                    setRangeStart("");
+                    setRangeEnd("");
+                  }}
+                  className="w-full rounded-xl border border-[#3A3A38]/20 bg-white/50 px-4 py-3 text-[#3A3A38] focus:border-[#4F6F52] focus:outline-none focus:ring-1 focus:ring-[#4F6F52] sm:w-64"
+                />
+              </div>
 
-                        {(sharedResultsByPatient[apt.patient_email]?.length ?? 0) > 0 && (
-                          <div className="mt-4 rounded-xl border border-[#4F6F52]/20 bg-[#4F6F52]/5 p-4">
-                            <p className="text-[10px] uppercase tracking-widest text-[#4F6F52] mb-2 font-bold">
-                              Shared Test Results
-                            </p>
-                            <div className="flex flex-col gap-2">
-                              {sharedResultsByPatient[apt.patient_email].map((r: any) => (
-                                <div key={r.id} className="text-sm">
-                                  <p className="font-semibold text-[#2C4C5B]">
-                                    {r.tool_title}: <span className="font-normal">{r.range_label}</span>
-                                  </p>
-                                  <p className="text-xs text-[#3A3A38]/70">{r.range_description}</p>
-                                  <p className="text-[10px] text-[#3A3A38]/40 mt-0.5">
-                                    Shared {new Date(r.shared_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Action Column: Meeting Link & Homework */}
-                      <div className="flex-1 flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-[#3A3A38]/10 pt-6 lg:pt-0 lg:pl-6">
-                        
-                        {/* Meeting Link Button */}
-                        {apt.modality === 'online' && apt.meeting_link && (
-                          <button 
-                            onClick={() => window.open(apt.meeting_link, "_blank")}
-                            className="w-full bg-[#2C4C5B] text-white py-3 rounded-full text-xs font-semibold uppercase tracking-widest transition hover:bg-[#1E3A5F]"
-                          >
-                            Launch Video Session
-                          </button>
-                        )}
-
-                        {/* Homework Editor */}
-                        <div className="bg-[#88B7B5]/10 rounded-2xl p-5 border border-[#88B7B5]/20 flex-1">
-                          <div className="flex justify-between items-center mb-3">
-                            <p className="text-xs font-bold uppercase tracking-widest text-[#2C4C5B]">Post-Session Homework</p>
-                            {editingHomeworkId !== apt.id && (
-                              <button 
-                                onClick={() => {
-                                  setEditingHomeworkId(apt.id);
-                                  setHomeworkText(apt.homework || "");
-                                  setHomeworkFiles([]);
-                                  setFileErrorMsg("");
-                                }}
-                                className="text-[10px] uppercase tracking-widest text-[#4F6F52] hover:underline"
-                              >
-                                {apt.homework ? "Edit" : "+ Assign"}
-                              </button>
-                            )}
-                          </div>
-
-                          {editingHomeworkId === apt.id ? (
-                            <div className="flex flex-col gap-3">
-                              <textarea 
-                                rows={3}
-                                className="w-full text-sm p-3 rounded-xl border border-[#3A3A38]/20 focus:outline-none focus:ring-1 focus:ring-[#4F6F52]"
-                                placeholder="Assign reading, journaling, or specific exercises..."
-                                value={homeworkText}
-                                onChange={(e) => setHomeworkText(e.target.value)}
-                              />
-                              <div>
-                                <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1 block">
-                                  Attach up to 2 files (max 5MB each)
-                                </label>
-                                <input
-                                  type="file"
-                                  multiple
-                                  onChange={handleHomeworkFileSelect}
-                                  className="w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#4F6F52]/10 file:px-3 file:py-2 file:text-[#4F6F52] file:text-xs file:font-semibold"
-                                />
-                                {homeworkFiles.length > 0 && (
-                                  <p className="mt-1 text-[10px] text-[#3A3A38]/60">
-                                    {homeworkFiles.map((f) => f.name).join(", ")}
-                                  </p>
-                                )}
-                                {fileErrorMsg && (
-                                  <p className="mt-1 text-[10px] text-[#A65D47] font-semibold">{fileErrorMsg}</p>
-                                )}
-                              </div>
-                              <div className="flex gap-2">
-                                <button 
-                                  onClick={() => saveHomework(apt.id)}
-                                  disabled={isSaving}
-                                  className="flex-1 bg-[#4F6F52] text-white py-2 rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-[#3A533D]"
-                                >
-                                  {isSaving ? "Saving..." : "Save"}
-                                </button>
-                                <button 
-                                  onClick={() => { setEditingHomeworkId(null); setHomeworkFiles([]); setFileErrorMsg(""); }}
-                                  className="flex-1 bg-white border border-[#3A3A38]/20 text-[#3A3A38] py-2 rounded-lg text-xs font-semibold uppercase tracking-wider"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col gap-3">
-                              <p className="text-sm text-[#3A3A38]/80 whitespace-pre-wrap">
-                                {apt.homework || <span className="italic opacity-50">No homework assigned yet.</span>}
-                              </p>
-                              {apt.homework_files?.length > 0 && (
-                                <div className="flex flex-col gap-1">
-                                  {apt.homework_files.map((f: any) => (
-                                    <a
-                                      key={f.path}
-                                      href={f.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-xs font-semibold text-[#2C4C5B] underline underline-offset-2"
-                                    >
-                                      📎 {f.name}
-                                    </a>
-                                  ))}
-                                </div>
-                              )}
-                              {apt.homework_submission_files?.length > 0 && (
-                                <div className="mt-2 pt-2 border-t border-[#88B7B5]/30">
-                                  <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60 mb-1">Client Submission:</p>
-                                  <div className="flex flex-col gap-1">
-                                    {apt.homework_submission_files.map((f: any) => (
-                                      <a
-                                        key={f.path}
-                                        href={f.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-semibold text-[#4F6F52] underline underline-offset-2"
-                                      >
-                                        📎 {f.name}
-                                      </a>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                      </div>
+              {selectedDate && (
+                <div className="flex flex-col gap-4 border-t border-[#3A3A38]/10 pt-8">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+                    Select Time <span className="normal-case tracking-normal">(15-min increments)</span>
+                  </label>
+                  {isDateBlocked ? (
+                    <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
+                      {selectedCounselor.name} is unavailable on this date.
                     </div>
-                  ))}
+                  ) : (
+                    <>
+                      {/* Type-a-time-range: quick alternative to tapping the grid below */}
+                      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-[#3A3A38]/10 bg-white/50 p-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">From</label>
+                          <input
+                            type="time"
+                            step={900}
+                            value={rangeStart}
+                            onChange={(e) => setRangeStart(e.target.value)}
+                            className="rounded-lg border border-[#3A3A38]/20 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">To</label>
+                          <input
+                            type="time"
+                            step={900}
+                            value={rangeEnd}
+                            onChange={(e) => setRangeEnd(e.target.value)}
+                            className="rounded-lg border border-[#3A3A38]/20 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={applyTimeRange}
+                          disabled={!rangeStart || !rangeEnd}
+                          className="rounded-full border border-[#2C4C5B]/30 px-4 py-2 text-xs font-semibold uppercase text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B] hover:text-white disabled:opacity-50"
+                        >
+                          Use This Time
+                        </button>
+                        <p className="text-xs text-[#3A3A38]/50">or tap slots directly below</p>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-4 md:grid-cols-6">
+                        {availableHours.map((slot) => {
+                          const isSelectedSlot = selectedSlots.includes(slot);
+                          const isTaken = effectiveBookedSlots.includes(slot);
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              disabled={isTaken}
+                              onClick={() => toggleTimeSlot(slot)}
+                              className={`rounded-xl border py-3 text-sm font-medium transition-all duration-200 ${
+                                isTaken
+                                  ? "cursor-not-allowed border-red-100 bg-red-50/50 text-red-300 line-through"
+                                  : isSelectedSlot
+                                  ? "scale-105 border-[#4F6F52] bg-[#4F6F52] text-white shadow-md"
+                                  : "border-[#3A3A38]/20 bg-white/50 text-[#3A3A38]/70 hover:border-[#4F6F52]/50 hover:bg-white"
+                              }`}
+                            >
+                              {formatTime(slot)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                  {!isDateBlocked && availableHours.length === 0 && (
+                    <p className="text-sm text-[#3A3A38]/60">No available time slots left for this date.</p>
+                  )}
+                  {selectedSlots.length > 0 && (
+                    <p className="text-sm font-medium text-[#4F6F52]">
+                      Selected: {formatTime(selectedSlots[0])} – {formatTime(selectedSlots[selectedSlots.length - 1] + 1)}
+                    </p>
+                  )}
                 </div>
               )}
-            </div>
 
+              {selectedCounselor.mode === "both" && (
+                <div className="flex flex-col gap-3 border-t border-[#3A3A38]/10 pt-8">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+                    Meeting Preference
+                  </label>
+                  <div className="flex gap-6">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#3A3A38]">
+                      <input
+                        type="radio"
+                        checked={modality === "online"}
+                        onChange={() => setModality("online")}
+                        className="h-4 w-4 accent-[#88B7B5]"
+                      />
+                      Google Meet
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#3A3A38]">
+                      <input
+                        type="radio"
+                        checked={modality === "in-person"}
+                        onChange={() => setModality("in-person")}
+                        className="h-4 w-4 accent-[#88B7B5]"
+                      />
+                      In-Person Clinic
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-8 border-t border-[#3A3A38]/10 pt-8">
+                <div className="flex flex-col gap-2 sm:max-w-xs">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+                    Coupon Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => {
+                        setCouponInput(e.target.value.toUpperCase());
+                        setCouponStatus("idle");
+                        setAppliedDiscountPercent(0);
+                      }}
+                      placeholder="e.g. GET15OFF"
+                      className="flex-1 rounded-xl border border-[#3A3A38]/20 bg-white/50 px-3 py-2 text-sm uppercase tracking-wide focus:border-[#4F6F52] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={!couponInput.trim() || couponStatus === "checking"}
+                      className="rounded-xl border border-[#2C4C5B]/30 px-4 py-2 text-xs font-semibold uppercase text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B] hover:text-white disabled:opacity-50"
+                    >
+                      {couponStatus === "checking" ? "..." : "Apply"}
+                    </button>
+                  </div>
+                  {couponStatus === "valid" && (
+                    <p className="text-xs font-semibold text-[#4F6F52]">✓ {appliedDiscountPercent}% off applied</p>
+                  )}
+                  {couponStatus === "invalid" && (
+                    <p className="text-xs font-semibold text-[#A65D47]">{couponError}</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">Total Cost</p>
+                    <p className="font-serif text-3xl font-medium text-[#4F6F52]">
+                      {appliedDiscountPercent > 0 && (
+                        <span className="mr-2 text-lg font-normal text-[#3A3A38]/40 line-through">
+                          ₹{totalPrice.toLocaleString()}
+                        </span>
+                      )}
+                      ₹{discountedTotal.toLocaleString()}{" "}
+                      <span className="text-sm font-normal text-[#3A3A38]/60">
+                        ({selectedSlots.length} sessions)
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCheckout}
+                    disabled={isSubmitting || !selectedDate || selectedSlots.length === 0}
+                    className="w-full rounded-full bg-[#2C4C5B] px-8 py-4 text-sm font-medium tracking-wide text-[#FBF8F2] transition-transform hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  >
+                    {isSubmitting ? "Processing..." : "Confirm & Pay with PayU"}
+                  </button>
+                </div>
+                {statusMessage && (
+                  <p
+                    className={`text-center text-sm font-medium ${
+                      statusMessage.includes("Redirecting") ? "text-[#4F6F52]" : "text-[#A65D47]"
+                    }`}
+                  >
+                    {statusMessage}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </section>
     </main>
+  );
+}
+
+export default function MatchPage() {
+  return (
+    <Suspense fallback={null}>
+      <MatchPageInner />
+    </Suspense>
   );
 }

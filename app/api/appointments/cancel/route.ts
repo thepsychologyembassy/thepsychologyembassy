@@ -51,9 +51,11 @@ export async function POST(request: Request) {
 
     // 2.5 ENFORCE 30-MINUTE CANCELLATION CUTOFF
     if (appointment.time_slots && appointment.time_slots.length > 0 && appointment.appointment_date) {
-      const startHour = Math.min(...appointment.time_slots);
+      // Slots are quarter-hour indices within the day (0 = 00:00 ... 95 = 23:45).
+      const startSlot = Math.min(...appointment.time_slots);
       const appointmentStart = new Date(appointment.appointment_date);
-      appointmentStart.setHours(startHour, 0, 0, 0);
+      appointmentStart.setHours(0, 0, 0, 0);
+      appointmentStart.setMinutes(startSlot * 15);
 
       const minutesUntilStart = (appointmentStart.getTime() - Date.now()) / (1000 * 60);
 
@@ -79,8 +81,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Could not securely verify refund amount" }, { status: 500 });
       }
 
-      // Calculate the true, server-verified amount
-      const secureRefundAmount = counselor.fees * appointment.time_slots.length;
+      // Calculate the true, server-verified amount. Each slot is 15 minutes,
+      // i.e. a quarter of the hourly fee (matches the booking-time pricing).
+      const secureRefundAmount = counselor.fees * appointment.time_slots.length * 0.25;
 
       const key = process.env.NEXT_PUBLIC_PAYU_MERCHANT_KEY!;
       const salt = process.env.PAYU_MERCHANT_SALT!;

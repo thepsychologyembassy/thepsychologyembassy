@@ -25,10 +25,13 @@ interface AppointmentRow {
   reminder_sent: boolean | null;
 }
 
-function formatTime(h: number) {
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:00 ${period}`;
+function formatTime(slot: number) {
+  const totalMinutes = slot * 15;
+  const h24 = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  const period = h24 >= 12 ? "PM" : "AM";
+  const hour12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${hour12}:${m < 10 ? "0" : ""}${m} ${period}`;
 }
 
 export async function GET(request: Request) {
@@ -58,6 +61,8 @@ export async function GET(request: Request) {
     // 2. Force current server time to IST (Asia/Kolkata)
     const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     const currentHourIST = nowIST.getHours();
+    // Slots are quarter-hour indices within the day (0 = 00:00 ... 95 = 23:45).
+    const currentSlotIST = currentHourIST * 4 + Math.floor(nowIST.getMinutes() / 15);
     
     // Format IST date to YYYY-MM-DD
     const year = nowIST.getFullYear();
@@ -85,17 +90,18 @@ export async function GET(request: Request) {
     for (const apt of (appointments || []) as AppointmentRow[]) {
       if (!apt.time_slots || apt.time_slots.length === 0) continue;
 
-      const startHour = Math.min(...apt.time_slots);
+      const startSlot = Math.min(...apt.time_slots);
 
-      // If current time is 4:XX PM (16), send reminders for 5:00 PM (17)
-      if (startHour === currentHourIST + 1) {
+      // Reminders run hourly; send when the session starts exactly 1 hour
+      // (4 quarter-hour slots) from now.
+      if (startSlot === currentSlotIST + 4) {
         
         const dateStr = nowIST.toLocaleDateString("en-IN", {
           weekday: "long", year: "numeric", month: "long", day: "numeric",
         });
         
-        const endHour = Math.max(...apt.time_slots) + 1;
-        const timeStr = `${formatTime(startHour)} - ${formatTime(endHour)}`;
+        const endSlot = Math.max(...apt.time_slots) + 1;
+        const timeStr = `${formatTime(startSlot)} - ${formatTime(endSlot)}`;
         const isOnline = apt.modality === "online";
 
         // Patient Email
@@ -151,7 +157,7 @@ export async function GET(request: Request) {
         sentCount++;
         debugLog.push(`Sent reminder for Apt ID: ${apt.id}`);
       } else {
-        debugLog.push(`Skipped Apt ID: ${apt.id}. Starts at ${startHour}:00, Server IST is ${currentHourIST}:XX.`);
+        debugLog.push(`Skipped Apt ID: ${apt.id}. Starts at slot ${startSlot} (${formatTime(startSlot)}), Server IST slot is ${currentSlotIST}.`);
       }
     }
 

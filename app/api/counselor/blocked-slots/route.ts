@@ -46,6 +46,11 @@ function isWithinNext6Days(dateStr: string) {
   return diffDays >= 1 && diffDays <= 6;
 }
 
+// Slots are quarter-hour indices within the day: 0 = 00:00 ... 95 = 23:45.
+function isValidSlot(slot: any) {
+  return typeof slot === "number" && Number.isInteger(slot) && slot >= 0 && slot <= 95;
+}
+
 // GET: list this counselor's blocked slots for the next 6 days.
 export async function GET(request: Request) {
   const { counselor, error } = await requireCounselor(request);
@@ -53,7 +58,7 @@ export async function GET(request: Request) {
 
   const { data, error: dbError } = await supabaseAdmin
     .from("blocked_slots")
-    .select("slot_date, hour")
+    .select("slot_date, slot_start")
     .eq("counselor_id", counselor._id)
     .gte("slot_date", new Date().toISOString().split("T")[0]);
 
@@ -61,14 +66,14 @@ export async function GET(request: Request) {
   return NextResponse.json({ blockedSlots: data || [] });
 }
 
-// POST: block a specific date + hour.
+// POST: block a specific date + 15-minute slot.
 export async function POST(request: Request) {
   const { counselor, error } = await requireCounselor(request);
   if (error) return error;
 
-  const { date, hour } = await request.json();
-  if (!date || typeof hour !== "number") {
-    return NextResponse.json({ error: "date and hour are required" }, { status: 400 });
+  const { date, slot } = await request.json();
+  if (!date || !isValidSlot(slot)) {
+    return NextResponse.json({ error: "date and slot (0-95) are required" }, { status: 400 });
   }
   if (!isWithinNext6Days(date)) {
     return NextResponse.json({ error: "Only the next 6 days can be blocked" }, { status: 400 });
@@ -81,7 +86,7 @@ export async function POST(request: Request) {
     .eq("counselor_id", counselor._id)
     .eq("appointment_date", date)
     .in("status", ["paid", "pending"])
-    .contains("time_slots", [hour])
+    .contains("time_slots", [slot])
     .maybeSingle();
 
   if (existingAppointment) {
@@ -91,22 +96,22 @@ export async function POST(request: Request) {
   const { error: insertError } = await supabaseAdmin
     .from("blocked_slots")
     .upsert(
-      { counselor_id: counselor._id, counselor_email: counselor.email.toLowerCase().trim(), slot_date: date, hour },
-      { onConflict: "counselor_id,slot_date,hour" }
+      { counselor_id: counselor._id, counselor_email: counselor.email.toLowerCase().trim(), slot_date: date, slot_start: slot },
+      { onConflict: "counselor_id,slot_date,slot_start" }
     );
 
   if (insertError) return NextResponse.json({ error: "Failed to block slot" }, { status: 500 });
   return NextResponse.json({ success: true });
 }
 
-// DELETE: unblock a specific date + hour.
+// DELETE: unblock a specific date + 15-minute slot.
 export async function DELETE(request: Request) {
   const { counselor, error } = await requireCounselor(request);
   if (error) return error;
 
-  const { date, hour } = await request.json();
-  if (!date || typeof hour !== "number") {
-    return NextResponse.json({ error: "date and hour are required" }, { status: 400 });
+  const { date, slot } = await request.json();
+  if (!date || !isValidSlot(slot)) {
+    return NextResponse.json({ error: "date and slot (0-95) are required" }, { status: 400 });
   }
 
   const { error: deleteError } = await supabaseAdmin
@@ -114,7 +119,7 @@ export async function DELETE(request: Request) {
     .delete()
     .eq("counselor_id", counselor._id)
     .eq("slot_date", date)
-    .eq("hour", hour);
+    .eq("slot_start", slot);
 
   if (deleteError) return NextResponse.json({ error: "Failed to unblock slot" }, { status: 500 });
   return NextResponse.json({ success: true });

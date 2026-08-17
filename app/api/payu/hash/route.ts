@@ -40,7 +40,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid counselor data" }, { status: 400 });
     }
 
-    let secureAmount = counselor.fees * slots_count;
+    // Each slot is 15 minutes, i.e. a quarter of the counselor's hourly fee.
+    let secureAmount = counselor.fees * slots_count * 0.25;
     let appliedCouponCode: string | null = null;
     let discountAmount = 0;
 
