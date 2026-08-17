@@ -26,10 +26,17 @@ interface Counselor {
   blockedDates?: string[];
 }
 
-const formatTime = (hour: number) => {
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const h = hour % 12 || 12;
-  return `${h < 10 ? "0" : ""}${h}:00 ${ampm}`;
+const formatTime = (slot: number) => {
+  const totalMinutes = slot * 15;
+  const h24 = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  const ampm = h24 >= 12 ? "PM" : "AM";
+  const h = h24 % 12 || 12;
+  return `${h < 10 ? "0" : ""}${h}:${m < 10 ? "0" : ""}${m} ${ampm}`;
+};
+const timeValueToSlot = (value: string) => {
+  const [h, m] = value.split(":").map(Number);
+  return Math.round((h * 60 + m) / 15);
 };
 
 function MatchPageInner() {
@@ -57,6 +64,13 @@ function MatchPageInner() {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [bookedSlots, setBookedSlots] = useState<number[]>([]);
+  // Type-a-time-range alternative to tapping the grid.
+  const [rangeStart, setRangeStart] = useState<string>("");
+  const [rangeEnd, setRangeEnd] = useState<string>("");
+  // Recurring weekly rules for the currently selected counselor: whole
+  // weekdays they're always off, and specific weekday+15-min-slot combos.
+  const [recurringWholeDays, setRecurringWholeDays] = useState<Set<number>>(new Set());
+  const [recurringSlots, setRecurringSlots] = useState<Set<string>>(new Set()); // "weekday|slot"
   const [modality, setModality] = useState<string>("online");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -201,7 +215,7 @@ function MatchPageInner() {
       // 2. Fetch counselor's manual blocks
       supabase
         .from("blocked_slots")
-        .select("hour")
+        .select("slot_start")
         .eq("counselor_id", selectedCounselorId)
         .eq("slot_date", selectedDate),
     ]);
@@ -210,41 +224,117 @@ function MatchPageInner() {
       console.error("Failed to fetch availability:", rpcError);
     }
 
-    // Extract the flat hours from both sources
-    const bookedHours = rpcData ? rpcData.map((row: any) => row.booked_hour) : [];
-    const blockedHours = blocked ? blocked.map((b: any) => b.hour) : [];
+    // Extract the flat quarter-hour slots from both sources
+    const bookedFromAppointments = rpcData ? rpcData.map((row: any) => row.booked_slot) : [];
+    const blockedFromCounselor = blocked ? blocked.map((b: any) => b.slot_start) : [];
 
     // Merge and deduplicate
-    setBookedSlots([...new Set([...bookedHours, ...blockedHours])]);
+    setBookedSlots([...new Set([...bookedFromAppointments, ...blockedFromCounselor])]);
   };
 
   fetchBookedSlots();
 }, [selectedCounselorId, selectedDate]);
 
+  // Fetch this counselor's recurring weekly availability rules once per
+  // counselor selection (not per date, since the rule is weekly-repeating).
+  useEffect(() => {
+    const fetchRecurringBlocks = async () => {
+      if (!selectedCounselorId) {
+        setRecurringWholeDays(new Set());
+        setRecurringSlots(new Set());
+        return;
+      }
+      const { data, error: recurringError } = await supabase
+        .from("counselor_recurring_blocks")
+        .select("weekday, slot_start")
+        .eq("counselor_id", selectedCounselorId);
+
+      if (recurringError) {
+        console.error("Failed to fetch recurring availability:", recurringError);
+        return;
+      }
+
+      const wholeDays = new Set<number>();
+      const slotKeys = new Set<string>();
+      (data || []).forEach((r: any) => {
+        if (r.slot_start === null || r.slot_start === undefined) wholeDays.add(r.weekday);
+        else slotKeys.add(`${r.weekday}|${r.slot_start}`);
+      });
+      setRecurringWholeDays(wholeDays);
+      setRecurringSlots(slotKeys);
+    };
+
+    fetchRecurringBlocks();
+  }, [selectedCounselorId]);
+
   const selectedCounselor = matchedCounselors.find((c) => c._id === selectedCounselorId);
-  const totalPrice = selectedCounselor ? selectedCounselor.fees * selectedSlots.length : 0;
+  // Each selected slot is 15 minutes, i.e. a quarter of the hourly fee.
+  const totalPrice = selectedCounselor ? selectedCounselor.fees * selectedSlots.length * 0.25 : 0;
   const discountedTotal = appliedDiscountPercent > 0
     ? Math.round((totalPrice - totalPrice * (appliedDiscountPercent / 100)) * 100) / 100
     : totalPrice;
-  const isDateBlocked = selectedCounselor?.blockedDates?.includes(selectedDate);
+  const selectedWeekday = selectedDate ? new Date(selectedDate + "T00:00:00").getDay() : null;
+  const isDateBlocked =
+    !!selectedCounselor?.blockedDates?.includes(selectedDate) ||
+    (selectedWeekday !== null && recurringWholeDays.has(selectedWeekday));
 
   const availableHours: number[] = [];
   if (selectedCounselor && !isDateBlocked) {
-    const start = selectedCounselor.shiftStart || 12;
-    const end = selectedCounselor.shiftEnd || 20;
+    const start = (selectedCounselor.shiftStart || 12) * 4;
+    const end = (selectedCounselor.shiftEnd || 20) * 4;
     for (let i = start; i < end; i++) availableHours.push(i);
   }
 
-  const toggleTimeSlot = (hour: number) => {
+  // Recurring weekly slot-blocks apply on top of one-off bookedSlots for
+  // whichever weekday the selected date falls on.
+  const effectiveBookedSlots =
+    selectedWeekday !== null
+      ? [
+          ...bookedSlots,
+          ...Array.from(recurringSlots)
+            .filter((k) => k.startsWith(`${selectedWeekday}|`))
+            .map((k) => parseInt(k.split("|")[1], 10)),
+        ]
+      : bookedSlots;
+
+  const toggleTimeSlot = (slot: number) => {
     setSelectedSlots((prev) =>
-      prev.includes(hour) ? prev.filter((h) => h !== hour) : [...prev, hour].sort((a, b) => a - b)
+      prev.includes(slot) ? prev.filter((s) => s !== slot) : [...prev, slot].sort((a, b) => a - b)
     );
+  };
+
+  // Type-a-time-range: pick a start and end time, select every 15-min slot
+  // in between (as long as none of them are taken).
+  const applyTimeRange = () => {
+    if (!rangeStart || !rangeEnd) return;
+    const startSlot = timeValueToSlot(rangeStart);
+    const endSlot = timeValueToSlot(rangeEnd);
+    if (endSlot <= startSlot) {
+      alert("End time must be after start time.");
+      return;
+    }
+    const range: number[] = [];
+    for (let s = startSlot; s < endSlot; s++) range.push(s);
+
+    const outOfBounds = range.some((s) => !availableHours.includes(s));
+    if (outOfBounds) {
+      alert("That range falls outside the psychologist's working hours.");
+      return;
+    }
+    const conflict = range.some((s) => effectiveBookedSlots.includes(s));
+    if (conflict) {
+      alert("Part of that range is already taken. Please pick a different time.");
+      return;
+    }
+    setSelectedSlots(range);
   };
 
   const chooseCounselor = async (id: string) => {
     setSelectedCounselorId(id);
     setSelectedDate("");
     setSelectedSlots([]);
+    setRangeStart("");
+    setRangeEnd("");
     const counselor = matchedCounselors.find((c) => c._id === id);
     if (counselor) setModality(counselor.mode === "in-person" ? "in-person" : "online");
 
@@ -583,6 +673,8 @@ function MatchPageInner() {
                   onChange={(e) => {
                     setSelectedDate(e.target.value);
                     setSelectedSlots([]);
+                    setRangeStart("");
+                    setRangeEnd("");
                   }}
                   className="w-full rounded-xl border border-[#3A3A38]/20 bg-white/50 px-4 py-3 text-[#3A3A38] focus:border-[#4F6F52] focus:outline-none focus:ring-1 focus:ring-[#4F6F52] sm:w-64"
                 />
@@ -591,39 +683,79 @@ function MatchPageInner() {
               {selectedDate && (
                 <div className="flex flex-col gap-4 border-t border-[#3A3A38]/10 pt-8">
                   <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
-                    Select Time Slots <span className="normal-case tracking-normal">(45 mins - 1 hour)</span>
+                    Select Time <span className="normal-case tracking-normal">(15-min increments)</span>
                   </label>
                   {isDateBlocked ? (
                     <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
                       {selectedCounselor.name} is unavailable on this date.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4 md:grid-cols-5">
-                      {availableHours.map((hour) => {
-                        const isSelectedSlot = selectedSlots.includes(hour);
-                        const isTaken = bookedSlots.includes(hour);
-                        return (
-                          <button
-                            key={hour}
-                            type="button"
-                            disabled={isTaken}
-                            onClick={() => toggleTimeSlot(hour)}
-                            className={`rounded-xl border py-3 text-sm font-medium transition-all duration-200 ${
-                              isTaken
-                                ? "cursor-not-allowed border-red-100 bg-red-50/50 text-red-300 line-through"
-                                : isSelectedSlot
-                                ? "scale-105 border-[#4F6F52] bg-[#4F6F52] text-white shadow-md"
-                                : "border-[#3A3A38]/20 bg-white/50 text-[#3A3A38]/70 hover:border-[#4F6F52]/50 hover:bg-white"
-                            }`}
-                          >
-                            {formatTime(hour)}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <>
+                      {/* Type-a-time-range: quick alternative to tapping the grid below */}
+                      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-[#3A3A38]/10 bg-white/50 p-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">From</label>
+                          <input
+                            type="time"
+                            step={900}
+                            value={rangeStart}
+                            onChange={(e) => setRangeStart(e.target.value)}
+                            className="rounded-lg border border-[#3A3A38]/20 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">To</label>
+                          <input
+                            type="time"
+                            step={900}
+                            value={rangeEnd}
+                            onChange={(e) => setRangeEnd(e.target.value)}
+                            className="rounded-lg border border-[#3A3A38]/20 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={applyTimeRange}
+                          disabled={!rangeStart || !rangeEnd}
+                          className="rounded-full border border-[#2C4C5B]/30 px-4 py-2 text-xs font-semibold uppercase text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B] hover:text-white disabled:opacity-50"
+                        >
+                          Use This Time
+                        </button>
+                        <p className="text-xs text-[#3A3A38]/50">or tap slots directly below</p>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-4 md:grid-cols-6">
+                        {availableHours.map((slot) => {
+                          const isSelectedSlot = selectedSlots.includes(slot);
+                          const isTaken = effectiveBookedSlots.includes(slot);
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              disabled={isTaken}
+                              onClick={() => toggleTimeSlot(slot)}
+                              className={`rounded-xl border py-3 text-sm font-medium transition-all duration-200 ${
+                                isTaken
+                                  ? "cursor-not-allowed border-red-100 bg-red-50/50 text-red-300 line-through"
+                                  : isSelectedSlot
+                                  ? "scale-105 border-[#4F6F52] bg-[#4F6F52] text-white shadow-md"
+                                  : "border-[#3A3A38]/20 bg-white/50 text-[#3A3A38]/70 hover:border-[#4F6F52]/50 hover:bg-white"
+                              }`}
+                            >
+                              {formatTime(slot)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                   {!isDateBlocked && availableHours.length === 0 && (
                     <p className="text-sm text-[#3A3A38]/60">No available time slots left for this date.</p>
+                  )}
+                  {selectedSlots.length > 0 && (
+                    <p className="text-sm font-medium text-[#4F6F52]">
+                      Selected: {formatTime(selectedSlots[0])} – {formatTime(selectedSlots[selectedSlots.length - 1] + 1)}
+                    </p>
                   )}
                 </div>
               )}
