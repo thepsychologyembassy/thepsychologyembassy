@@ -109,7 +109,16 @@ export async function POST(request: Request) {
   if (!existingBlock) {
     const { error: insertError } = await supabaseAdmin
       .from("blocked_slots")
-      .insert({ counselor_id: counselor._id, counselor_email: counselor.email.toLowerCase().trim(), slot_date: date, slot_start: slot });
+      .insert({
+        counselor_id: counselor._id,
+        counselor_email: counselor.email.toLowerCase().trim(),
+        slot_date: date,
+        slot_start: slot,
+        // Legacy NOT NULL column: the whole-hour (0-23) this 15-min slot
+        // falls within. Not read anywhere in app code, but the DB rejects
+        // inserts without it.
+        hour: Math.floor(slot / 4),
+      });
 
     if (insertError) {
       console.error("blocked-slots insert error:", insertError);
