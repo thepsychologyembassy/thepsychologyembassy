@@ -93,14 +93,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This slot already has a booked session" }, { status: 409 });
   }
 
-  const { error: insertError } = await supabaseAdmin
+  // Check whether this slot is already blocked instead of relying on
+  // upsert's ON CONFLICT, which requires a matching unique constraint in
+  // the DB. If that constraint is missing/mismatched, upsert throws and the
+  // counselor sees "Failed to block slot" on every attempt - this
+  // check-then-insert approach works regardless of DB constraints.
+  const { data: existingBlock } = await supabaseAdmin
     .from("blocked_slots")
-    .upsert(
-      { counselor_id: counselor._id, counselor_email: counselor.email.toLowerCase().trim(), slot_date: date, slot_start: slot },
-      { onConflict: "counselor_id,slot_date,slot_start" }
-    );
+    .select("id")
+    .eq("counselor_id", counselor._id)
+    .eq("slot_date", date)
+    .eq("slot_start", slot)
+    .maybeSingle();
 
-  if (insertError) return NextResponse.json({ error: "Failed to block slot" }, { status: 500 });
+  if (!existingBlock) {
+    const { error: insertError } = await supabaseAdmin
+      .from("blocked_slots")
+      .insert({ counselor_id: counselor._id, counselor_email: counselor.email.toLowerCase().trim(), slot_date: date, slot_start: slot });
+
+    if (insertError) {
+      console.error("blocked-slots insert error:", insertError);
+      return NextResponse.json({ error: insertError.message || "Failed to block slot" }, { status: 500 });
+    }
+  }
+
   return NextResponse.json({ success: true });
 }
 

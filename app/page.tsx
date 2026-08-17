@@ -1,14 +1,18 @@
 "use client";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Navbar from "../components/Navbar";
 import VideoBackground from "../components/VideoBackground";
+import { startBookingFlow } from "../lib/bookingRedirect";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function Home() {
+  const router = useRouter();
+  const [isBookingRouting, setIsBookingRouting] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const journeyPathRefs = useRef<(SVGPathElement | null)[]>([]);
   const linksRef = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -136,12 +140,22 @@ export default function Home() {
           >
             You are on a better path.
           </h1>
-          <Link
-            href="/book"
-            className="mt-8 rounded-full bg-[#F6D86B] px-8 py-3 text-sm font-semibold uppercase tracking-widest text-[#3A3A38] transition-transform hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(246,216,107,0.3)]"
+          <button
+            type="button"
+            disabled={isBookingRouting}
+            onClick={async () => {
+              if (isBookingRouting) return;
+              setIsBookingRouting(true);
+              try {
+                await startBookingFlow(router);
+              } finally {
+                setIsBookingRouting(false);
+              }
+            }}
+            className="mt-8 rounded-full bg-[#F6D86B] px-8 py-3 text-sm font-semibold uppercase tracking-widest text-[#3A3A38] transition-transform hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(246,216,107,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Book a Session
-          </Link>
+            {isBookingRouting ? "Loading..." : "Book a Session"}
+          </button>
         </div>
       </section>
 

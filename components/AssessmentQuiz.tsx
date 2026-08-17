@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
+import { startBookingFlow } from "../lib/bookingRedirect";
 
 interface Option {
   label: string;
@@ -31,11 +33,13 @@ interface SubmitResult {
 }
 
 export default function AssessmentQuiz({ slug, title, questions, disclaimer }: AssessmentQuizProps) {
+  const router = useRouter();
   const [stage, setStage] = useState<"intro" | "quiz" | "submitting" | "result" | "error">("intro");
   const [step, setStep] = useState(0);
   const [selections, setSelections] = useState<Record<number, number>>({});
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isBookingRouting, setIsBookingRouting] = useState(false);
 
   const totalQuestions = questions.length;
   const isLastQuestion = step === totalQuestions - 1;
@@ -155,12 +159,22 @@ export default function AssessmentQuiz({ slug, title, questions, disclaimer }: A
 
         <div className="flex flex-wrap gap-4">
           {result.showBookingCTA && (
-            <Link
-              href="/book"
-              className="flex items-center gap-2 rounded-full bg-[#2C4C5B] px-8 py-4 text-sm font-semibold tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-lg"
+            <button
+              type="button"
+              disabled={isBookingRouting}
+              onClick={async () => {
+                if (isBookingRouting) return;
+                setIsBookingRouting(true);
+                try {
+                  await startBookingFlow(router);
+                } finally {
+                  setIsBookingRouting(false);
+                }
+              }}
+              className="flex items-center gap-2 rounded-full bg-[#2C4C5B] px-8 py-4 text-sm font-semibold tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {result.ctaText}
-            </Link>
+              {isBookingRouting ? "Loading..." : result.ctaText}
+            </button>
           )}
           <button
             onClick={restart}

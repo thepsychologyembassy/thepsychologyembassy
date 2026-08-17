@@ -68,27 +68,45 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const { weekday, slot = null } = body;
+  const normalizedSlot = slot === undefined ? null : slot;
 
   if (!isValidWeekday(weekday)) {
     return NextResponse.json({ error: "weekday must be an integer 0-6 (Sun-Sat)" }, { status: 400 });
   }
-  if (!isValidSlot(slot)) {
+  if (!isValidSlot(normalizedSlot)) {
     return NextResponse.json({ error: "slot must be an integer 0-95, or omitted for a whole-day block" }, { status: 400 });
   }
 
-  const { error: insertError } = await supabaseAdmin
+  // Check for an existing rule instead of relying on upsert's ON CONFLICT.
+  // Whole-day rules (slot_start IS NULL) and specific-slot rules need two
+  // different unique constraints to make the previous onConflict targets
+  // valid - if either was missing/mismatched in the DB, upsert threw and
+  // every save failed with "Failed to save recurring rule". A plain
+  // check-then-insert/update sidesteps that entirely.
+  let existingQuery = supabaseAdmin
     .from("counselor_recurring_blocks")
-    .upsert(
-      {
+    .select("id")
+    .eq("counselor_id", counselor._id)
+    .eq("weekday", weekday);
+  existingQuery = normalizedSlot === null ? existingQuery.is("slot_start", null) : existingQuery.eq("slot_start", normalizedSlot);
+  const { data: existingRule } = await existingQuery.maybeSingle();
+
+  if (!existingRule) {
+    const { error: insertError } = await supabaseAdmin
+      .from("counselor_recurring_blocks")
+      .insert({
         counselor_id: counselor._id,
         counselor_email: counselor.email.toLowerCase().trim(),
         weekday,
-        slot_start: slot === undefined ? null : slot,
-      },
-      { onConflict: slot === null || slot === undefined ? "counselor_id,weekday" : "counselor_id,weekday,slot_start" }
-    );
+        slot_start: normalizedSlot,
+      });
 
-  if (insertError) return NextResponse.json({ error: "Failed to save recurring rule" }, { status: 500 });
+    if (insertError) {
+      console.error("recurring-blocks insert error:", insertError);
+      return NextResponse.json({ error: insertError.message || "Failed to save recurring rule" }, { status: 500 });
+    }
+  }
+
   return NextResponse.json({ success: true });
 }
 

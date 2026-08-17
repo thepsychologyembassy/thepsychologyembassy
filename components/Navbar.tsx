@@ -3,16 +3,19 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { client } from "../lib/sanity";
+import { startBookingFlow } from "../lib/bookingRedirect";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isCounselor, setIsCounselor] = useState(false);
-  
+  const [isBookingRouting, setIsBookingRouting] = useState(false);
+
+  const router = useRouter();
   const pathname = usePathname();
   const forceSolid = ["/dashboard", "/counselor-portal", "/login", "/signup", "/tools", "/counselors"].some(path => pathname.startsWith(path));
   const isSolid = scrolled || forceSolid;
@@ -64,6 +67,18 @@ export default function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
+  };
+
+  // Takes the user straight into the intake flow (login -> resume draft ->
+  // reselect matches -> fresh intake) instead of the /book landing page.
+  const handleBookSessionClick = async () => {
+    if (isBookingRouting) return;
+    setIsBookingRouting(true);
+    try {
+      await startBookingFlow(router);
+    } finally {
+      setIsBookingRouting(false);
+    }
   };
 
   return (
@@ -119,11 +134,15 @@ export default function Navbar() {
             </div>
           )}
 
-          <Link href="/book" className={`hidden rounded-full border px-5 py-2 text-xs uppercase tracking-widest transition-colors duration-300 sm:inline-block ${
+          <button
+            type="button"
+            onClick={handleBookSessionClick}
+            disabled={isBookingRouting}
+            className={`hidden rounded-full border px-5 py-2 text-xs uppercase tracking-widest transition-colors duration-300 sm:inline-block disabled:cursor-not-allowed disabled:opacity-60 ${
               isSolid ? "border-[#4F6F52] text-[#4F6F52] hover:bg-[#4F6F52] hover:text-[#FBF8F2]" : "border-[#FBF8F2] text-[#FBF8F2] hover:bg-[#FBF8F2] hover:text-[#3A3A38]"
             }`}>
-            Book Session
-          </Link>
+            {isBookingRouting ? "Loading..." : "Book Session"}
+          </button>
         </div>
       </nav>
 
@@ -140,14 +159,26 @@ export default function Navbar() {
               { name: "Tests & Tools", path: "/tools" },
               { name: "Blogs", path: "/blogs" },
               { name: "Events & Initiatives", path: "/events" },
-              { name: "Book Appointment", path: "/book" },
+              { name: "Book Appointment", path: "/book", isBookingCta: true },
               { name: "About Us", path: "/about" },
-            ].map((link, i) => (
-              <Link key={link.name} href={link.path} onClick={() => setMenuOpen(false)} className="group flex items-center font-serif text-3xl text-[#FBF8F2] transition-colors hover:text-[#CFE3E8] sm:text-5xl">
-                <span className="mr-6 font-sans text-sm tracking-widest text-[#4F6F52] opacity-60">0{i + 1}</span>
-                {link.name}
-              </Link>
-            ))}
+            ].map((link, i) =>
+              link.isBookingCta ? (
+                <button
+                  key={link.name}
+                  type="button"
+                  onClick={() => { setMenuOpen(false); handleBookSessionClick(); }}
+                  className="group flex items-center text-left font-serif text-3xl text-[#FBF8F2] transition-colors hover:text-[#CFE3E8] sm:text-5xl"
+                >
+                  <span className="mr-6 font-sans text-sm tracking-widest text-[#4F6F52] opacity-60">0{i + 1}</span>
+                  {link.name}
+                </button>
+              ) : (
+                <Link key={link.name} href={link.path} onClick={() => setMenuOpen(false)} className="group flex items-center font-serif text-3xl text-[#FBF8F2] transition-colors hover:text-[#CFE3E8] sm:text-5xl">
+                  <span className="mr-6 font-sans text-sm tracking-widest text-[#4F6F52] opacity-60">0{i + 1}</span>
+                  {link.name}
+                </Link>
+              )
+            )}
           </div>
 
           <div className="mt-8 flex flex-col justify-between gap-6 border-t border-[#FBF8F2]/10 pt-6 sm:flex-row sm:items-center">
