@@ -303,24 +303,30 @@ function IntakeFormInner() {
                 placeholder="Email"
                 className={inputClass}
               />
-              <div className="flex gap-3">
-                <input
-                  type="tel"
-                  name="phone"
-                  required
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="Phone Number"
-                  className={`${inputClass} flex-1`}
-                />
-                <input
-                  type="text"
-                  name="phone_extension"
-                  value={form.phone_extension}
-                  onChange={handleChange}
-                  placeholder="Ext."
-                  className={`${inputClass} w-24`}
-                />
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    value={form.phone}
+                    onChange={handleChange}
+                    placeholder="Phone Number"
+                    className={`${inputClass} sm:flex-1`}
+                  />
+                  <input
+                    type="text"
+                    name="phone_extension"
+                    value={form.phone_extension}
+                    onChange={handleChange}
+                    placeholder="Extension (optional)"
+                    aria-label="Phone extension (optional)"
+                    className={`${inputClass} sm:w-36`}
+                  />
+                </div>
+                <p className="text-xs text-[#3A3A38]/50">
+                  Extension is optional — leave it blank if you don&apos;t have one.
+                </p>
               </div>
             </div>
           </div>
