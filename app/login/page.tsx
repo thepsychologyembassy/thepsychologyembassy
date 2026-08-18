@@ -40,17 +40,38 @@ function LoginPageInner() {
     setIsLoading(true);
     setErrorMsg("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await res.json();
 
-    if (error) {
-      setErrorMsg(error.message);
-      setIsLoading(false);
-    } else {
-      // If successful, send them back to where they were headed.
+      if (!res.ok) {
+        setErrorMsg(result.error || "Something went wrong. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Our rate-limited server route did the actual sign-in - hand its
+      // tokens to the browser client so the session sticks around normally.
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: result.session.access_token,
+        refresh_token: result.session.refresh_token,
+      });
+
+      if (sessionError) {
+        setErrorMsg(sessionError.message);
+        setIsLoading(false);
+        return;
+      }
+
       router.push(redirectTarget);
+    } catch (err) {
+      console.error("Login failed:", err);
+      setErrorMsg("Something went wrong. Please try again.");
+      setIsLoading(false);
     }
   };
 
