@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { checkRateLimit, formatRetryMessage } from "../../../../lib/rateLimit";
+import { checkRateLimit, formatRetryMessage, getClientIp } from "../../../../lib/rateLimit";
 
 export async function POST(request: Request) {
   const { email, redirectTo } = await request.json();
@@ -9,7 +9,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
 
-  const { allowed, retryAfterSeconds } = await checkRateLimit("password_reset", email);
+  // Rate limited by device (IP address), not by account.
+  const clientIp = getClientIp(request);
+  const { allowed, retryAfterSeconds } = await checkRateLimit("password_reset", clientIp);
   if (!allowed) {
     return NextResponse.json({ error: formatRetryMessage(retryAfterSeconds, "reset") }, { status: 429 });
   }

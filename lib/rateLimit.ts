@@ -12,13 +12,33 @@ const LOCKOUT_MINUTES = 15; // once locked, how long before they can try again
 export type RateLimitAction = "login" | "password_reset";
 
 /**
- * Call before doing the real work. Returns { allowed: false, retryAfterSeconds }
- * if this identifier (email) has hit 5 attempts within the last 15 minutes -
- * in which case the caller should refuse the request without even touching
- * Supabase Auth.
+ * Best-effort client IP extraction. Vercel (and most reverse proxies) set
+ * x-forwarded-for to "client, proxy1, proxy2, ..." - the first entry is the
+ * original visitor. Falls back to x-real-ip, then "unknown" (e.g. local dev
+ * without a proxy in front), which just means all such requests share one
+ * bucket - fine for dev, never happens in production on Vercel.
+ */
+export function getClientIp(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const first = forwardedFor.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+  return "unknown";
+}
+
+/**
+ * Call before doing the real work. identifier is whatever we're rate
+ * limiting by - typically the caller's IP address (see getClientIp), so the
+ * limit applies per device/network rather than per account. Returns
+ * { allowed: false, retryAfterSeconds } once this identifier has hit 5
+ * attempts within the last 15 minutes - the caller should refuse the
+ * request without even touching Supabase Auth.
  */
 export async function checkRateLimit(action: RateLimitAction, rawIdentifier: string) {
-  const identifier = rawIdentifier.toLowerCase().trim();
+  const identifier = rawIdentifier.trim();
   const now = new Date();
 
   const { data: existing } = await supabaseAdmin
@@ -66,7 +86,7 @@ export async function checkRateLimit(action: RateLimitAction, rawIdentifier: str
 
 /** Call on a successful login so a real user isn't stuck waiting out the window. */
 export async function resetRateLimit(action: RateLimitAction, rawIdentifier: string) {
-  const identifier = rawIdentifier.toLowerCase().trim();
+  const identifier = rawIdentifier.trim();
   await supabaseAdmin.from("auth_rate_limits").delete().eq("action", action).eq("identifier", identifier);
 }
 
