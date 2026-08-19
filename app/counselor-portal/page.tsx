@@ -9,6 +9,10 @@ import Navbar from "../../components/Navbar";
 export default function CounselorPortal() {
   const router = useRouter();
   const [counselor, setCounselor] = useState<any>(null);
+  // Whether the logged-in counselor's email also appears in the Sanity
+  // "Authorized Admin Emails" list. Used to show a shortcut into /admin
+  // for the head admin, without exposing it to regular counselors.
+  const [isAdmin, setIsAdmin] = useState(false);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sharedResultsByPatient, setSharedResultsByPatient] = useState<Record<string, any[]>>({});
@@ -91,6 +95,21 @@ export default function CounselorPortal() {
       setCounselor(sanityCounselor);
       setShiftStartInput(sanityCounselor.shiftStart ?? 12);
       setShiftEndInput(sanityCounselor.shiftEnd ?? 20);
+
+      // 2b. Check the same "Authorized Admin Emails" list the /admin
+      // routes use server-side, so the shortcut button only shows up
+      // for the head admin (or anyone else added to that list).
+      try {
+        const settings = await client.fetch(
+          `*[_type == "siteSettings" && _id == "siteSettings"][0]{ adminEmails }`,
+          {},
+          { cache: "no-store" }
+        );
+        const adminEmails: string[] = settings?.adminEmails || [];
+        setIsAdmin(adminEmails.map((e) => e.toLowerCase().trim()).includes(userEmail));
+      } catch (err) {
+        console.error("Failed to check admin status:", err);
+      }
 
       // 3. Fetch their Patients' Appointments
       const { data: apts, error } = await supabase
@@ -381,9 +400,27 @@ export default function CounselorPortal() {
       <Navbar />
 
       <section className="mx-auto max-w-6xl px-6 pb-24 pt-32">
-        <div className="mb-12 border-b border-[#3A3A38]/10 pb-8">
-          <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#4F6F52]">Psychologist Portal</p>
-          <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">Welcome, {counselor?.name || "Professional"}</h1>
+        <div className="mb-12 flex flex-col gap-4 border-b border-[#3A3A38]/10 pb-8 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-2 text-sm font-medium uppercase tracking-[0.35em] text-[#4F6F52]">Psychologist Portal</p>
+            <h1 className="font-serif text-4xl font-medium text-[#2C4C5B]">Welcome, {counselor?.name || "Professional"}</h1>
+          </div>
+
+          {/* Only visible to whoever is in the Sanity "Authorized Admin
+              Emails" list — e.g. the head admin — as a shortcut into the
+              Admin Dashboard at /admin. */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => router.push("/admin")}
+              className="inline-flex items-center gap-2 self-start rounded-xl bg-[#A65D47] px-5 py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-sm transition hover:bg-[#8f4d39]"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Go to Admin Dashboard
+            </button>
+          )}
         </div>
 
         {isLoading ? (
