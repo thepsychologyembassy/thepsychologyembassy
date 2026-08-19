@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     // 2. CRITICAL FIX: VERIFY ADMIN ROLE VIA SANITY
-    const settings = await client.fetch(`*[_type == "siteSettings"][0]{ adminEmails }`);
+    const settings = await client.fetch(`*[_type == "siteSettings" && _id == "siteSettings"][0]{ adminEmails }`);
     const adminEmails = settings?.adminEmails || [];
     
     if (!adminEmails.includes(user.email)) {

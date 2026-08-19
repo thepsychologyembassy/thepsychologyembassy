@@ -17,8 +17,19 @@ export const structure: StructureResolver = (S, context) =>
 
       S.divider(), // A visual line separating draggable content from fixed content
 
-      // 2. Automatically list everything else normally (like Settings)
+      // 2. Site Settings as a true singleton — always opens/edits the one
+      // document with this fixed ID, never lets you create a duplicate.
+      S.listItem()
+        .title('Site Settings')
+        .id('siteSettings')
+        .child(
+          S.document()
+            .schemaType('siteSettings')
+            .documentId('siteSettings')
+        ),
+
+      // 3. Automatically list everything else normally
       ...S.documentTypeListItems().filter(
-        (listItem) => !['counselor', 'course', 'internship', 'tool', 'blog', 'initiative', 'testimonial'].includes(listItem.getId() as string)
+        (listItem) => !['counselor', 'course', 'internship', 'tool', 'blog', 'initiative', 'testimonial', 'siteSettings'].includes(listItem.getId() as string)
       ),
     ])

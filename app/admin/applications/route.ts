@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   }
 
   // 3. Cross-Reference with Sanity Site Settings on the Server
-  const settings = await client.fetch(`*[_type == "siteSettings"][0]`);
+  const settings = await client.fetch(`*[_type == "siteSettings" && _id == "siteSettings"][0]`);
   const authorizedEmails: string[] = settings?.adminEmails || [];
 
   if (!authorizedEmails.includes(user.email)) {
