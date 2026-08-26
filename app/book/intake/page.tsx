@@ -57,6 +57,14 @@ function IntakeFormInner() {
       setUser(authUser);
 
       const paramSession = searchParams.get("session");
+      // If the user was sent here with an explicit ?session=, it's because
+      // they clicked something like "Edit Your Answers" on the matches page
+      // for that specific session - they mean to edit it, no matter what
+      // status it's in (matched/selected/converted). Only the *implicit*
+      // "resume whatever I was last doing" lookup (no session param) should
+      // skip straight past a non-draft session to its matches instead of
+      // reopening the form.
+      const isExplicitEdit = !!paramSession;
 
       const prefill = (row: any) => ({
         full_name: row.full_name || "",
@@ -91,12 +99,15 @@ function IntakeFormInner() {
             .maybeSingle();
 
       if (existing) {
-        if (existing.status !== "draft") {
+        if (existing.status !== "draft" && !isExplicitEdit) {
           // They already finished the form and have a match (or further)
           // sitting there — send them straight to it instead of asking again.
           router.replace(`/book/match?session=${existing.id}`);
           return;
         }
+        // Either it's a draft, or the user explicitly asked to edit this
+        // exact session (e.g. via "Edit Your Answers" on the matches page) —
+        // either way, load it into the form so they can change and resave it.
         setSessionId(existing.id);
         setForm(prefill(existing));
       } else {

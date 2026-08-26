@@ -542,12 +542,18 @@ function MatchPageInner() {
       <Navbar />
       <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-32 sm:px-12">
         {!isRebook && (
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link
               href={`/book/intake?session=${sessionId}`}
               className="group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
             >
               <span className="transition-transform group-hover:-translate-x-1">←</span> Edit Your Answers
+            </Link>
+            <Link
+              href="/book"
+              className="group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
+            >
+              View All Psychologists <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
           </div>
         )}
