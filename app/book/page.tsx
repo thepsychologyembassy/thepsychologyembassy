@@ -158,7 +158,7 @@ export default function BookPage() {
       <Navbar />
 
       {/* 1. HERO */}
-      <section className="relative h-[50vh] w-full overflow-hidden sm:h-[70vh]">
+      <section className="relative w-full overflow-hidden">
         <div className="fixed inset-0 -z-10 h-screen w-full pointer-events-none">
           <VideoBackground
             src="/videos/beach-waves.mp4"
@@ -166,36 +166,34 @@ export default function BookPage() {
           />
         </div>
 
-        <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pt-20 text-center">
-          <div className="w-fit max-w-2xl rounded-3xl border border-white/10 bg-white/5 px-8 py-10 shadow-sm backdrop-blur-sm sm:px-14 sm:py-12">
-            <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#F6D86B] drop-shadow-sm">Find Your Calm</p>
-            <h1 className="font-serif text-4xl font-medium leading-tight text-[#F6D86B] drop-shadow-[0_2px_18px_rgba(246,216,107,0.45)] sm:text-6xl">A Safe Harbor.</h1>
+        <div className="relative z-10 flex min-h-[60vh] flex-col items-center justify-center px-6 py-24 text-center sm:min-h-[70vh] sm:py-32">
+          <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 px-8 py-10 shadow-sm backdrop-blur-sm sm:px-14 sm:py-12">
+            <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#4F6F52] drop-shadow-sm">Find Your Calm</p>
+            <h1 className="font-serif text-4xl font-medium leading-tight text-[#4F6F52] drop-shadow-sm sm:text-6xl">A Safe Harbor.</h1>
+
+            <div className="mt-10 border-t border-white/10 pt-10">
+              <h2 className="font-serif text-3xl font-medium text-[#4F6F52] sm:text-4xl">Meet Our Team</h2>
+              <p className="mt-4 text-sm uppercase tracking-widest text-[#4F6F52]">Find the right specialist to guide your journey.</p>
+              <div className="mt-4 text-sm font-bold leading-relaxed text-[#4F6F52]">
+                <p>To book a session you can</p>
+                <p className="mt-1">1) Go to the profile of the psychologist you feel the most comfortable with and click on Book a Session</p>
+                <p className="mt-1">or</p>
+                <p className="mt-1">2) Let us help match you with the psychologist most attuned for your needs.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* 2. DYNAMIC COUNSELORS SECTION (3-COLUMN GRID, CLINICAL FIRST) */}
-      <section className="relative z-10 mx-auto -mt-10 w-full max-w-6xl px-6 pb-24 sm:-mt-20">
-        <div className="mb-16 flex justify-center">
-          <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 px-8 py-10 text-center shadow-sm backdrop-blur-sm sm:px-12">
-            <h2 className="font-serif text-3xl font-medium text-[#F6D86B] sm:text-4xl">Meet Our Team</h2>
-            <p className="mt-4 text-sm uppercase tracking-widest text-[#F6D86B]">Find the right specialist to guide your journey.</p>
-            <div className="mt-4 text-sm font-bold leading-relaxed text-[#F6D86B]">
-              <p>To book a session you can</p>
-              <p className="mt-1">1) Go to the profile of the psychologist you feel the most comfortable with and click on Book a Session</p>
-              <p className="mt-1">or</p>
-              <p className="mt-1">2) Let us help match you with the psychologist most attuned for your needs.</p>
-            </div>
-          </div>
-        </div>
-
+      <section className="relative z-10 mx-auto mt-16 w-full max-w-6xl px-6 pb-24">
         {isLoading ? (
           <div className="flex justify-center py-10"><p className="animate-pulse text-sm uppercase tracking-widest text-[#88B7B5]">Loading Profiles...</p></div>
         ) : (
           <div className="flex flex-col gap-16">
             {Object.entries(groupedCounselors).map(([designation, list]) => (
               <div key={designation}>
-                <h3 className="mb-6 border-b border-[#3A3A38]/10 pb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#F6D86B]">
+                <h3 className="mb-6 border-b border-[#3A3A38]/10 pb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#4F6F52]">
                   {designation}s
                 </h3>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
