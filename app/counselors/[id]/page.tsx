@@ -5,8 +5,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 // Next.js requires this for dynamic routes in the App Router
-export default async function CounselorProfile({ params }: { params: Promise<{ id: string }> }) {
+export default async function CounselorProfile({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  const sessionId = typeof sp.session === "string" ? sp.session : undefined;
+
   // Fetch the specific counselor using their Sanity _id
   const counselor = await client.fetch(
     `*[_type == "counselor" && _id == $id][0]`,
@@ -17,6 +26,14 @@ export default async function CounselorProfile({ params }: { params: Promise<{ i
   if (!counselor) {
     notFound();
   }
+
+  // Arrived from the match page (already has an intake session on file) ->
+  // skip straight to this psychologist's scheduler. Arrived fresh (e.g. from
+  // the book-appointment landing page) -> fill the intake form first, then
+  // land directly on this psychologist's scheduler.
+  const bookHref = sessionId
+    ? `/book/match?session=${sessionId}&counselor=${counselor._id}&direct=1`
+    : `/book/intake?counselor=${counselor._id}`;
 
   return (
     <main className="min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
@@ -66,7 +83,7 @@ export default async function CounselorProfile({ params }: { params: Promise<{ i
                 )}
               </div>
 
-              <Link href={`/book`} className="mt-8 w-full rounded-full bg-[#2C4C5B] py-3 text-center text-sm font-medium tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-lg">
+              <Link href={bookHref} className="mt-8 w-full rounded-full bg-[#2C4C5B] py-3 text-center text-sm font-medium tracking-wide text-white transition-transform hover:-translate-y-1 hover:shadow-lg">
                 Book a Session
               </Link>
             </div>

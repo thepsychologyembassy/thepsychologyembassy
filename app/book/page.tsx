@@ -167,16 +167,22 @@ export default function BookPage() {
         </div>
 
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pt-20 text-center">
-          <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-black drop-shadow-sm">Find Your Calm</p>
-          <h1 className="max-w-4xl font-serif text-4xl font-medium leading-tight text-black sm:text-6xl">A Safe Harbor.</h1>
+          <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#F6D86B] drop-shadow-sm">Find Your Calm</p>
+          <h1 className="max-w-4xl font-serif text-4xl font-medium leading-tight text-[#F6D86B] drop-shadow-[0_2px_18px_rgba(246,216,107,0.45)] sm:text-6xl">A Safe Harbor.</h1>
         </div>
       </section>
 
       {/* 2. DYNAMIC COUNSELORS SECTION (3-COLUMN GRID, CLINICAL FIRST) */}
       <section className="relative z-10 mx-auto -mt-10 w-full max-w-6xl px-6 pb-24 sm:-mt-20">
         <div className="mb-16 text-center">
-          <h2 className="font-serif text-3xl font-medium text-black sm:text-4xl">Meet Our Team</h2>
-          <p className="mt-4 text-sm uppercase tracking-widest text-black/60">Find the right specialist to guide your journey.</p>
+          <h2 className="font-serif text-3xl font-medium text-[#F6D86B] sm:text-4xl">Meet Our Team</h2>
+          <p className="mt-4 text-sm uppercase tracking-widest text-[#F6D86B]">Find the right specialist to guide your journey.</p>
+          <div className="mt-4 text-sm font-bold leading-relaxed text-[#F6D86B]">
+            <p>To book a session you can</p>
+            <p className="mt-1">1) Go to the profile of the psychologist you feel the most comfortable with and click on Book a Session</p>
+            <p className="mt-1">or</p>
+            <p className="mt-1">2) Let us help match you with the psychologist most attuned for your needs.</p>
+          </div>
         </div>
 
         {isLoading ? (
@@ -185,7 +191,7 @@ export default function BookPage() {
           <div className="flex flex-col gap-16">
             {Object.entries(groupedCounselors).map(([designation, list]) => (
               <div key={designation}>
-                <h3 className="mb-6 border-b border-[#3A3A38]/10 pb-2 text-sm font-semibold uppercase tracking-[0.2em] text-black">
+                <h3 className="mb-6 border-b border-[#3A3A38]/10 pb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#F6D86B]">
                   {designation}s
                 </h3>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
@@ -236,10 +242,10 @@ export default function BookPage() {
       {/* 3. START THE INTAKE FLOW */}
       <section id="booking-form" className="relative z-10 mx-auto w-full max-w-4xl px-6 pb-24">
         <div className="overflow-hidden rounded-3xl border border-[#88B7B5]/30 bg-white/60 shadow-[0_8px_40px_rgba(44,76,91,0.05)] backdrop-blur-xl">
-          <div className="border-b border-[#88B7B5]/20 bg-[#88B7B5]/10 px-8 py-8 sm:px-12">
-            <h2 className="font-serif text-2xl font-medium text-black">Ready to Begin?</h2>
+          <div className="border-b border-[#88B7B5]/20 bg-[#88B7B5]/10 px-8 py-8 text-center sm:px-12">
+            <h2 className="font-serif text-2xl font-medium text-black">Need Help Choosing a Psychologist</h2>
             <p className="mt-2 text-sm text-[#3A3A38]/70">
-              We&apos;ll ask a few short questions and match you with the 3 psychologists best suited to help—including at least one Clinical Psychologist.
+              Let us help match you to the 3 most suited psychologists for you.
             </p>
           </div>
 
@@ -270,7 +276,7 @@ export default function BookPage() {
                   disabled={isRouting}
                   className="rounded-full bg-[#2C4C5B] px-10 py-4 text-sm font-medium tracking-wide text-[#FBF8F2] transition-transform hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isRouting ? "Loading..." : "Book Appointment"}
+                  {isRouting ? "Loading..." : "Match Me to Psychologists"}
                 </button>
                 <p className="text-xs text-[#3A3A38]/50">Takes about 3 minutes.</p>
               </>

@@ -53,6 +53,12 @@ function MatchPageInner() {
   const rebookCounselorId = searchParams.get("counselor");
   const isRebook = searchParams.get("rebook") === "1" && !!rebookCounselorId;
   const isReselect = searchParams.get("reselect") === "1";
+  // "Direct booking" (from a psychologist's profile, via the intake form):
+  // same single-counselor scheduler as a rebook, but sourced from a real
+  // intake session (so checkout has accurate name/email/phone) instead of
+  // just the logged-in user's account metadata.
+  const isDirect = searchParams.get("direct") === "1" && !!rebookCounselorId && !!sessionId;
+  const isSolo = isRebook || isDirect;
 
   const [isResolving, setIsResolving] = useState(true);
   const [intakeSession, setIntakeSession] = useState<any>(null);
@@ -106,15 +112,19 @@ function MatchPageInner() {
       if (!user) {
         const redirectTarget = isRebook
           ? `/book/match?counselor=${rebookCounselorId}&rebook=1`
+          : isDirect
+          ? `/book/match?session=${sessionId}&counselor=${rebookCounselorId}&direct=1`
           : `/book/match?session=${sessionId}`;
         router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
         return;
       }
 
-      // ── Rebook: "continue with this psychologist" ──────────────────
-      // Skip intake/matching entirely. Fetch just that one counselor and
-      // go straight to the scheduler, using the logged-in user's own info.
-      if (isRebook) {
+      // ── Rebook / Direct booking: single-counselor scheduler ─────────
+      // Skip the top-3 matching entirely. Fetch just that one counselor and
+      // go straight to the scheduler. Rebook uses the logged-in user's own
+      // account info; Direct booking (from a profile, via the intake form)
+      // loads the real intake session so checkout has accurate details.
+      if (isSolo) {
         const counselor: Counselor | null = await client.fetch(
           `*[_type == "counselor" && _id == $id][0]`,
           { id: rebookCounselorId },
@@ -126,7 +136,23 @@ function MatchPageInner() {
           return;
         }
 
-        setRebookUser(user);
+        if (isDirect) {
+          const { data: session, error } = await supabase
+            .from("intake_sessions")
+            .select("*")
+            .eq("id", sessionId)
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (error || !session) {
+            router.push("/book/intake");
+            return;
+          }
+          setIntakeSession(session);
+        } else {
+          setRebookUser(user);
+        }
+
         setMatchedCounselors([counselor]);
         setSelectedCounselorId(counselor._id);
         setModality(counselor.mode === "in-person" ? "in-person" : "online");
@@ -192,7 +218,7 @@ function MatchPageInner() {
 
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, isRebook, rebookCounselorId, isReselect]);
+  }, [sessionId, isRebook, isDirect, rebookCounselorId, isReselect]);
 
   // Double-booking prevention sync (same as the old booking form), plus
   // slots the counselor has manually blocked off.
@@ -544,7 +570,11 @@ function MatchPageInner() {
         {!isRebook && (
           <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link
-              href={`/book/intake?session=${sessionId}`}
+              href={
+                isDirect
+                  ? `/book/intake?session=${sessionId}&counselor=${rebookCounselorId}`
+                  : `/book/intake?session=${sessionId}`
+              }
               className="group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
             >
               <span className="transition-transform group-hover:-translate-x-1">←</span> Edit Your Answers
@@ -553,21 +583,27 @@ function MatchPageInner() {
               href="/book"
               className="group flex w-fit items-center gap-2 text-sm font-medium uppercase tracking-widest text-[#3A3A38]/50 transition-colors hover:text-[#2C4C5B]"
             >
-              View All Psychologists <span className="transition-transform group-hover:translate-x-1">→</span>
+              {isDirect ? "Change Psychologist" : "View All Psychologists"} <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
           </div>
         )}
 
         <div className="mb-12 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.35em] text-black">
-            {isRebook ? "Book Again" : "Your Matches"}
+            {isRebook ? "Book Again" : isDirect ? "Direct Booking" : "Your Matches"}
           </p>
           <h1 className="font-serif text-3xl font-medium text-black sm:text-4xl">
-            {isRebook ? `Continue your care with ${matchedCounselors[0]?.name || "your psychologist"}` : "We think these 3 can help you most"}
+            {isRebook
+              ? `Continue your care with ${matchedCounselors[0]?.name || "your psychologist"}`
+              : isDirect
+              ? `Schedule with ${matchedCounselors[0]?.name || "your psychologist"}`
+              : "We think these 3 can help you most"}
           </h1>
           <p className="mt-4 text-sm text-[#3A3A38]/70">
             {isRebook
               ? "Pick a new date and time to schedule your next session."
+              : isDirect
+              ? "You chose to book directly with this psychologist — pick a date and time below, or change your mind anytime."
               : "Based on what you shared, including at least one Clinical Psychologist."}
           </p>
         </div>
@@ -583,7 +619,7 @@ function MatchPageInner() {
           </div>
         )}
 
-        <div className={`grid grid-cols-1 gap-6 ${isRebook ? "mx-auto max-w-sm" : "sm:grid-cols-3"}`}>
+        <div className={`grid grid-cols-1 gap-6 ${isSolo ? "mx-auto max-w-sm" : "sm:grid-cols-3"}`}>
           {matchedCounselors.map((c) => {
             const isSelected = selectedCounselorId === c._id;
             const isClinical = (c.designation || "").toLowerCase().includes("clinical");
@@ -629,7 +665,7 @@ function MatchPageInner() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-[#4F6F52]">₹{c.fees}/hr</p>
                       <Link
-                        href={`/counselors/${c._id}`}
+                        href={sessionId ? `/counselors/${c._id}?session=${sessionId}` : `/counselors/${c._id}`}
                         target="_blank"
                         className="text-xs font-semibold uppercase tracking-wider text-[#2C4C5B] underline"
                       >

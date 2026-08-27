@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import { client } from "../../../lib/sanity";
 import Navbar from "../../../components/Navbar";
 
 const GENDER_OPTIONS = [
@@ -39,10 +40,26 @@ function IntakeFormInner() {
   const [user, setUser] = useState<any>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  // Direct-booking mode: they came from a psychologist's profile page and
+  // picked this specific person, rather than asking us to match them to 3.
+  const [directCounselor, setDirectCounselor] = useState<{ _id: string; name: string } | null>(null);
 
   const [isResolving, setIsResolving] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const counselorParam = searchParams.get("counselor");
+
+  useEffect(() => {
+    if (!counselorParam) {
+      setDirectCounselor(null);
+      return;
+    }
+    client
+      .fetch(`*[_type == "counselor" && _id == $id][0]{_id, name}`, { id: counselorParam })
+      .then((c: any) => setDirectCounselor(c || null))
+      .catch(() => setDirectCounselor(null));
+  }, [counselorParam]);
 
   useEffect(() => {
     const init = async () => {
@@ -51,7 +68,9 @@ function IntakeFormInner() {
       } = await supabase.auth.getUser();
 
       if (!authUser) {
-        router.push("/login?redirect=/book/intake");
+        const qs = searchParams.toString();
+        const target = qs ? `/book/intake?${qs}` : "/book/intake";
+        router.push(`/login?redirect=${encodeURIComponent(target)}`);
         return;
       }
       setUser(authUser);
@@ -99,9 +118,12 @@ function IntakeFormInner() {
             .maybeSingle();
 
       if (existing) {
-        if (existing.status !== "draft" && !isExplicitEdit) {
+        if (existing.status !== "draft" && !isExplicitEdit && !counselorParam) {
           // They already finished the form and have a match (or further)
           // sitting there — send them straight to it instead of asking again.
+          // (Skipped when direct-booking a specific psychologist from their
+          // profile — that always lets them fill/reuse the form and go
+          // straight to that one person's scheduler.)
           router.replace(`/book/match?session=${existing.id}`);
           return;
         }
@@ -189,6 +211,29 @@ function IntakeFormInner() {
       id = data.id;
     }
 
+    if (counselorParam) {
+      // Direct booking: they picked this psychologist themselves from their
+      // profile, so skip the keyword-matching engine entirely and take them
+      // straight to that psychologist's scheduler.
+      const { error: selectError } = await supabase
+        .from("intake_sessions")
+        .update({
+          selected_counselor_id: counselorParam,
+          status: "selected",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (selectError) {
+        setError("Something went wrong saving your selection. Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push(`/book/match?session=${id}&counselor=${counselorParam}&direct=1`);
+      return;
+    }
+
     try {
       const res = await fetch("/api/match", {
         method: "POST",
@@ -225,10 +270,14 @@ function IntakeFormInner() {
             Intake Form
           </p>
           <h1 className="font-serif text-3xl font-medium text-black sm:text-4xl">
-            Let&apos;s find the right psychologist for you
+            {directCounselor
+              ? `Book your session with ${directCounselor.name}`
+              : "Let's find the right psychologist for you"}
           </h1>
           <p className="mt-4 text-sm text-[#3A3A38]/70">
-            A few questions so we can match you with the 3 specialists best suited to help.
+            {directCounselor
+              ? `A few details so we can get you booked in with ${directCounselor.name}.`
+              : "A few questions so we can match you with the 3 specialists best suited to help."}
           </p>
         </div>
 
@@ -427,7 +476,13 @@ function IntakeFormInner() {
             disabled={isSubmitting}
             className="w-full rounded-full bg-[#2C4C5B] px-8 py-4 text-sm font-medium tracking-wide text-[#FBF8F2] transition-transform hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? "Finding Your Matches..." : "Find My Psychologists"}
+            {isSubmitting
+              ? directCounselor
+                ? "Saving Your Details..."
+                : "Finding Your Matches..."
+              : directCounselor
+              ? "Continue to Scheduling"
+              : "Find My Psychologists"}
           </button>
         </form>
       </section>

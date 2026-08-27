@@ -5,15 +5,16 @@ import { supabase } from "./supabase";
 type RouterLike = { push: (href: string) => void };
 
 /**
- * Sends the user straight into the booking flow instead of the /book
- * landing page:
- *  - Not logged in            -> /login, then back to /book/intake
+ * Routes a "Book a Session" click (navbar, hero, assessment quiz):
+ *  - Not logged in            -> /login, then back to here
  *  - Has a draft intake       -> resume that draft
  *  - Already matched/booked   -> back to their top-3 matches (reselect)
- *  - Nothing on file yet      -> fresh /book/intake
+ *  - Nothing on file yet (a brand-new client) -> the /book landing page,
+ *    so they can either browse the team and book a specific psychologist
+ *    directly, or use the "Match Me to Psychologists" flow from there.
  *
  * NOTE: the dashboard's own "Book a Session" (empty-state) button
- * intentionally still routes to /book (the landing page) so returning
+ * intentionally already routes to /book (the landing page) so returning
  * clients can scroll through the team and site before starting a new
  * intake - that button should NOT use this helper.
  */
@@ -23,7 +24,7 @@ export async function startBookingFlow(router: RouterLike) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    router.push("/login?redirect=/book/intake");
+    router.push("/login?redirect=/book");
     return;
   }
 
@@ -48,5 +49,5 @@ export async function startBookingFlow(router: RouterLike) {
     console.error("Failed to check for an existing intake session:", err);
   }
 
-  router.push("/book/intake");
+  router.push("/book");
 }
