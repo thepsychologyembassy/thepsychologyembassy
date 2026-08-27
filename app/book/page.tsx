@@ -167,21 +167,25 @@ export default function BookPage() {
         </div>
 
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pt-20 text-center">
-          <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#F6D86B] drop-shadow-sm">Find Your Calm</p>
-          <h1 className="max-w-4xl font-serif text-4xl font-medium leading-tight text-[#F6D86B] drop-shadow-[0_2px_18px_rgba(246,216,107,0.45)] sm:text-6xl">A Safe Harbor.</h1>
+          <div className="w-fit max-w-2xl rounded-3xl border border-white/10 bg-white/5 px-8 py-10 shadow-sm backdrop-blur-sm sm:px-14 sm:py-12">
+            <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#F6D86B] drop-shadow-sm">Find Your Calm</p>
+            <h1 className="font-serif text-4xl font-medium leading-tight text-[#F6D86B] drop-shadow-[0_2px_18px_rgba(246,216,107,0.45)] sm:text-6xl">A Safe Harbor.</h1>
+          </div>
         </div>
       </section>
 
       {/* 2. DYNAMIC COUNSELORS SECTION (3-COLUMN GRID, CLINICAL FIRST) */}
       <section className="relative z-10 mx-auto -mt-10 w-full max-w-6xl px-6 pb-24 sm:-mt-20">
-        <div className="mb-16 text-center">
-          <h2 className="font-serif text-3xl font-medium text-[#F6D86B] sm:text-4xl">Meet Our Team</h2>
-          <p className="mt-4 text-sm uppercase tracking-widest text-[#F6D86B]">Find the right specialist to guide your journey.</p>
-          <div className="mt-4 text-sm font-bold leading-relaxed text-[#F6D86B]">
-            <p>To book a session you can</p>
-            <p className="mt-1">1) Go to the profile of the psychologist you feel the most comfortable with and click on Book a Session</p>
-            <p className="mt-1">or</p>
-            <p className="mt-1">2) Let us help match you with the psychologist most attuned for your needs.</p>
+        <div className="mb-16 flex justify-center">
+          <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 px-8 py-10 text-center shadow-sm backdrop-blur-sm sm:px-12">
+            <h2 className="font-serif text-3xl font-medium text-[#F6D86B] sm:text-4xl">Meet Our Team</h2>
+            <p className="mt-4 text-sm uppercase tracking-widest text-[#F6D86B]">Find the right specialist to guide your journey.</p>
+            <div className="mt-4 text-sm font-bold leading-relaxed text-[#F6D86B]">
+              <p>To book a session you can</p>
+              <p className="mt-1">1) Go to the profile of the psychologist you feel the most comfortable with and click on Book a Session</p>
+              <p className="mt-1">or</p>
+              <p className="mt-1">2) Let us help match you with the psychologist most attuned for your needs.</p>
+            </div>
           </div>
         </div>
 
