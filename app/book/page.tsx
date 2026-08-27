@@ -154,7 +154,7 @@ export default function BookPage() {
   };
 
   return (
-    <main className="relative isolate min-h-screen bg-[#FBF8F2] text-[#3A3A38]">
+    <main className="relative isolate min-h-screen bg-[#FBF8F2] text-[#1B4D3E]">
       <Navbar />
 
       {/* 1. HERO */}
@@ -223,7 +223,7 @@ export default function BookPage() {
                           ))}
                         </div>
 
-                        <p className="mt-2 text-xs leading-relaxed text-[#3A3A38]/70 line-clamp-3">{c.bio}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-[#1B4D3E]/70 line-clamp-3">{c.bio}</p>
                         
                         <div className="mt-6 flex items-center justify-between border-t border-[#3A3A38]/10 pt-4">
                           <p className="text-sm font-semibold text-[#4F6F52]">₹{c.fees}/hr</p>
@@ -246,7 +246,7 @@ export default function BookPage() {
         <div className="overflow-hidden rounded-3xl border border-[#88B7B5]/30 bg-white/60 shadow-[0_8px_40px_rgba(44,76,91,0.05)] backdrop-blur-xl">
           <div className="border-b border-[#88B7B5]/20 bg-[#88B7B5]/10 px-8 py-8 text-center sm:px-12">
             <h2 className="font-serif text-2xl font-medium text-black">Need Help Choosing a Psychologist</h2>
-            <p className="mt-2 text-sm text-[#3A3A38]/70">
+            <p className="mt-2 text-sm text-[#1B4D3E]/70">
               Let us help match you to the 3 most suited psychologists for you.
             </p>
           </div>
@@ -260,7 +260,7 @@ export default function BookPage() {
                   <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
                 </div>
                 <h3 className="font-serif text-2xl font-medium text-black">Authentication Required</h3>
-                <p className="max-w-md text-sm text-[#3A3A38]/70">To ensure your privacy and secure your appointment slots, please log in or create an account to continue.</p>
+                <p className="max-w-md text-sm text-[#1B4D3E]/70">To ensure your privacy and secure your appointment slots, please log in or create an account to continue.</p>
                 <div className="flex gap-4">
                   <Link href="/login?redirect=/book/intake" className="rounded-full bg-[#2C4C5B] px-8 py-3 text-sm font-medium tracking-wide text-[#FBF8F2] transition-transform hover:-translate-y-1 hover:shadow-lg">
                     Log In
@@ -280,7 +280,7 @@ export default function BookPage() {
                 >
                   {isRouting ? "Loading..." : "Match Me to Psychologists"}
                 </button>
-                <p className="text-xs text-[#3A3A38]/50">Takes about 3 minutes.</p>
+                <p className="text-xs text-[#1B4D3E]/50">Takes about 3 minutes.</p>
               </>
             )}
           </div>
@@ -296,10 +296,10 @@ export default function BookPage() {
             <div className="block sm:hidden">
               <div className="flex flex-col items-center rounded-3xl border border-[#3A3A38]/10 bg-white p-8 shadow-sm">
                 <span className="mb-4 font-serif text-5xl text-[#88B7B5]">"</span>
-                <p className="mb-6 text-sm italic leading-relaxed text-[#3A3A38]/80">{testimonials[currentIndex].quote}</p>
+                <p className="mb-6 text-sm italic leading-relaxed text-[#1B4D3E]/80">{testimonials[currentIndex].quote}</p>
                 {/* Applied Confidentiality Filter */}
                 <p className="font-semibold tracking-widest text-black">{anonymizeName(testimonials[currentIndex].name)}</p>
-                <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/50 mt-1">Verified Client</p>
+                <p className="text-[10px] uppercase tracking-widest text-[#1B4D3E]/50 mt-1">Verified Client</p>
               </div>
             </div>
 
@@ -308,12 +308,12 @@ export default function BookPage() {
                 <div key={`${test._id}-${i}`} className="flex flex-col items-center justify-between rounded-3xl border border-[#3A3A38]/10 bg-white p-10 shadow-sm transition-opacity duration-500">
                   <div className="flex flex-col items-center">
                     <span className="mb-4 font-serif text-6xl text-[#88B7B5]/60">"</span>
-                    <p className="mb-6 text-lg italic leading-relaxed text-[#3A3A38]/80">{test.quote}</p>
+                    <p className="mb-6 text-lg italic leading-relaxed text-[#1B4D3E]/80">{test.quote}</p>
                   </div>
                   <div className="text-center">
                     {/* Applied Confidentiality Filter */}
                     <p className="text-sm font-semibold uppercase tracking-widest text-black">{anonymizeName(test.name)}</p>
-                    <p className="text-[10px] uppercase tracking-widest text-[#3A3A38]/50 mt-1">Verified Client</p>
+                    <p className="text-[10px] uppercase tracking-widest text-[#1B4D3E]/50 mt-1">Verified Client</p>
                   </div>
                 </div>
               ))}
