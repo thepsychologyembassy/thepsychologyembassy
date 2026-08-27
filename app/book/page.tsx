@@ -168,13 +168,13 @@ export default function BookPage() {
 
         <div className="relative z-10 flex min-h-[60vh] flex-col items-center justify-center px-6 py-24 text-center sm:min-h-[70vh] sm:py-32">
           <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 px-8 py-10 shadow-sm backdrop-blur-sm sm:px-14 sm:py-12">
-            <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#4F6F52] drop-shadow-sm">Find Your Calm</p>
-            <h1 className="font-serif text-4xl font-medium leading-tight text-[#4F6F52] drop-shadow-sm sm:text-6xl">A Safe Harbor.</h1>
+            <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-[#192f1b] drop-shadow-sm">Find Your Calm</p>
+            <h1 className="font-serif text-4xl font-medium leading-tight text-[#192f1b] drop-shadow-sm sm:text-6xl">A Safe Harbor.</h1>
 
             <div className="mt-10 border-t border-white/10 pt-10">
-              <h2 className="font-serif text-3xl font-medium text-[#4F6F52] sm:text-4xl">Meet Our Team</h2>
-              <p className="mt-4 text-sm uppercase tracking-widest text-[#4F6F52]">Find the right specialist to guide your journey.</p>
-              <div className="mt-4 text-sm font-bold leading-relaxed text-[#4F6F52]">
+              <h2 className="font-serif text-3xl font-medium text-[#192f1b] sm:text-4xl">Meet Our Team</h2>
+              <p className="mt-4 text-sm uppercase tracking-widest text-[#192f1b]">Find the right specialist to guide your journey.</p>
+              <div className="mt-4 text-sm font-bold leading-relaxed text-[#192f1b]">
                 <p>To book a session you can</p>
                 <p className="mt-1">1) Go to the profile of the psychologist you feel the most comfortable with and click on Book a Session</p>
                 <p className="mt-1">or</p>
@@ -193,7 +193,7 @@ export default function BookPage() {
           <div className="flex flex-col gap-16">
             {Object.entries(groupedCounselors).map(([designation, list]) => (
               <div key={designation}>
-                <h3 className="mb-6 border-b border-[#3A3A38]/10 pb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#4F6F52]">
+                <h3 className="mb-6 border-b border-[#3A3A38]/10 pb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#192f1b]">
                   {designation}s
                 </h3>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
@@ -217,7 +217,7 @@ export default function BookPage() {
                             </span>
                           )}
                           {c.speciality && c.speciality.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag, idx) => (
-                            <span key={idx} className="flex items-center rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#4F6F52]">
+                            <span key={idx} className="flex items-center rounded-md bg-[#4F6F52]/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#192f1b]">
                               {tag}
                             </span>
                           ))}
@@ -226,7 +226,7 @@ export default function BookPage() {
                         <p className="mt-2 text-xs leading-relaxed text-[#1B4D3E]/70 line-clamp-3">{c.bio}</p>
                         
                         <div className="mt-6 flex items-center justify-between border-t border-[#3A3A38]/10 pt-4">
-                          <p className="text-sm font-semibold text-[#4F6F52]">₹{c.fees}/hr</p>
+                          <p className="text-sm font-semibold text-[#192f1b]">₹{c.fees}/hr</p>
                           <Link href={`/counselors/${c._id}`} className="rounded-full border border-[#2C4C5B]/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B] hover:text-white">
                             View Profile
                           </Link>
