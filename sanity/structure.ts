@@ -12,6 +12,7 @@ export const structure: StructureResolver = (S, context) =>
       orderableDocumentListDeskItem({ type: 'internship', title: 'Internships', S, context }),
       orderableDocumentListDeskItem({ type: 'tool', title: 'Tests & Tools', S, context }), 
       orderableDocumentListDeskItem({ type: 'blog', title: 'Blog Posts', S, context }),
+      orderableDocumentListDeskItem({ type: 'newsletter', title: 'Newsletters', S, context }),
       orderableDocumentListDeskItem({ type: 'initiative', title: 'Initiatives', S, context }),
       orderableDocumentListDeskItem({ type: 'testimonial', title: 'Testimonials', S, context }),
 
@@ -30,6 +31,6 @@ export const structure: StructureResolver = (S, context) =>
 
       // 3. Automatically list everything else normally
       ...S.documentTypeListItems().filter(
-        (listItem) => !['counselor', 'course', 'internship', 'tool', 'blog', 'initiative', 'testimonial', 'siteSettings'].includes(listItem.getId() as string)
+        (listItem) => !['counselor', 'course', 'internship', 'tool', 'blog', 'newsletter', 'initiative', 'testimonial', 'siteSettings'].includes(listItem.getId() as string)
       ),
     ])

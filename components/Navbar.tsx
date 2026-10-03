@@ -158,6 +158,7 @@ export default function Navbar() {
               { name: "Courses & Internships", path: "/programs" },
               { name: "Tests & Tools", path: "/tools" },
               { name: "Blogs", path: "/blogs" },
+              { name: "Newsletters", path: "/newsletters" },
               { name: "Events & Initiatives", path: "/events" },
               { name: "Book Appointment", path: "/book", isBookingCta: true },
               { name: "About Us", path: "/about" },

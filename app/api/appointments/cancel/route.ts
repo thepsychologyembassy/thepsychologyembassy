@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { client } from "../../../../lib/sanity";
 import { Resend } from "resend";
+import { deleteCalendarEventsForAppointment } from "../../../../lib/googleCalendar";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Secure server-side client
@@ -32,7 +33,9 @@ export async function POST(request: Request) {
     // 2. FETCH APPOINTMENT DATA (Now including appointment_date)
     const { data: appointment, error: fetchError } = await supabaseAdmin
       .from("appointments")
-      .select("patient_email, status, payment_order_id, counselor_id, time_slots, appointment_date")
+      .select(
+        "patient_email, status, payment_order_id, counselor_id, counselor_email, time_slots, appointment_date, patient_calendar_event_id, counselor_calendar_event_id"
+      )
       .eq("id", appointmentId)
       .single();
 
@@ -124,6 +127,12 @@ export async function POST(request: Request) {
       .eq("id", appointmentId);
 
     if (updateError) throw updateError;
+
+    // 4.5 REMOVE ANY GOOGLE CALENDAR REMINDERS TIED TO THIS SESSION
+    if (appointment.patient_calendar_event_id || appointment.counselor_calendar_event_id) {
+      await deleteCalendarEventsForAppointment(appointment);
+    }
+
     // 5. SEND NOTIFICATION EMAILS
     try {
       const aptDate = new Date(appointment.appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });

@@ -38,6 +38,9 @@ const timeValueToSlot = (value: string) => {
   const [h, m] = value.split(":").map(Number);
   return Math.round((h * 60 + m) / 15);
 };
+// A session duration is always a whole number of hours (1-5), each hour
+// being 4 quarter-hour slots under the hood.
+const SLOTS_PER_HOUR = 4;
 
 function MatchPageInner() {
   const router = useRouter();
@@ -70,9 +73,11 @@ function MatchPageInner() {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [bookedSlots, setBookedSlots] = useState<number[]>([]);
-  // Type-a-time-range alternative to tapping the grid.
+  // Start time (15-min grid, same as before) + a fixed-hour duration.
+  // The end time is always start + (durationHours * 1 hour) - no picking
+  // an end time directly, and no arbitrary-length ranges.
   const [rangeStart, setRangeStart] = useState<string>("");
-  const [rangeEnd, setRangeEnd] = useState<string>("");
+  const [durationHours, setDurationHours] = useState<number>(1);
   // Recurring weekly rules for the currently selected counselor: whole
   // weekdays they're always off, and specific weekday+15-min-slot combos.
   const [recurringWholeDays, setRecurringWholeDays] = useState<Set<number>>(new Set());
@@ -323,33 +328,25 @@ function MatchPageInner() {
         ]
       : bookedSlots;
 
-  const toggleTimeSlot = (slot: number) => {
-    setSelectedSlots((prev) =>
-      prev.includes(slot) ? prev.filter((s) => s !== slot) : [...prev, slot].sort((a, b) => a - b)
-    );
-  };
-
-  // Type-a-time-range: pick a start and end time, select every 15-min slot
-  // in between (as long as none of them are taken).
+  // Pick a start time (15-min grid) + a fixed duration in whole hours
+  // (1-5). The session always runs start -> start + durationHours; there's
+  // no picking an end time or an arbitrary-length range directly.
   const applyTimeRange = () => {
-    if (!rangeStart || !rangeEnd) return;
+    if (!rangeStart) return;
     const startSlot = timeValueToSlot(rangeStart);
-    const endSlot = timeValueToSlot(rangeEnd);
-    if (endSlot <= startSlot) {
-      alert("End time must be after start time.");
-      return;
-    }
+    const endSlot = startSlot + durationHours * SLOTS_PER_HOUR;
+
     const range: number[] = [];
     for (let s = startSlot; s < endSlot; s++) range.push(s);
 
     const outOfBounds = range.some((s) => !availableHours.includes(s));
     if (outOfBounds) {
-      alert("That range falls outside the psychologist's working hours.");
+      alert("That falls outside the psychologist's working hours. Try an earlier start time or a shorter duration.");
       return;
     }
     const conflict = range.some((s) => effectiveBookedSlots.includes(s));
     if (conflict) {
-      alert("Part of that range is already taken. Please pick a different time.");
+      alert("Part of that time is already taken. Please pick a different start time or duration.");
       return;
     }
     setSelectedSlots(range);
@@ -360,7 +357,7 @@ function MatchPageInner() {
     setSelectedDate("");
     setSelectedSlots([]);
     setRangeStart("");
-    setRangeEnd("");
+    setDurationHours(1);
     const counselor = matchedCounselors.find((c) => c._id === id);
     if (counselor) setModality(counselor.mode === "in-person" ? "in-person" : "online");
 
@@ -716,7 +713,7 @@ function MatchPageInner() {
                     setSelectedDate(e.target.value);
                     setSelectedSlots([]);
                     setRangeStart("");
-                    setRangeEnd("");
+                    setDurationHours(1);
                   }}
                   className="w-full rounded-xl border border-[#3A3A38]/20 bg-white/50 px-4 py-3 text-[#3A3A38] focus:border-[#4F6F52] focus:outline-none focus:ring-1 focus:ring-[#4F6F52] sm:w-64"
                 />
@@ -725,7 +722,7 @@ function MatchPageInner() {
               {selectedDate && (
                 <div className="flex flex-col gap-4 border-t border-[#3A3A38]/10 pt-8">
                   <label className="text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
-                    Select Time <span className="normal-case tracking-normal">(15-min increments)</span>
+                    Select Time <span className="normal-case tracking-normal">(start time, then session length)</span>
                   </label>
                   {isDateBlocked ? (
                     <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
@@ -733,10 +730,9 @@ function MatchPageInner() {
                     </div>
                   ) : (
                     <>
-                      {/* Type-a-time-range: quick alternative to tapping the grid below */}
                       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-[#3A3A38]/10 bg-white/50 p-4">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">From</label>
+                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">Start Time</label>
                           <input
                             type="time"
                             step={900}
@@ -746,49 +742,34 @@ function MatchPageInner() {
                           />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">To</label>
-                          <input
-                            type="time"
-                            step={900}
-                            value={rangeEnd}
-                            onChange={(e) => setRangeEnd(e.target.value)}
+                          <label className="text-[10px] uppercase tracking-widest text-[#3A3A38]/60">Duration</label>
+                          <select
+                            value={durationHours}
+                            onChange={(e) => setDurationHours(Number(e.target.value))}
                             className="rounded-lg border border-[#3A3A38]/20 px-3 py-2 text-sm"
-                          />
+                          >
+                            {[1, 2, 3, 4, 5].map((h) => (
+                              <option key={h} value={h}>
+                                {h} hour{h > 1 ? "s" : ""}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                         <button
                           type="button"
                           onClick={applyTimeRange}
-                          disabled={!rangeStart || !rangeEnd}
+                          disabled={!rangeStart}
                           className="rounded-full border border-[#2C4C5B]/30 px-4 py-2 text-xs font-semibold uppercase text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B] hover:text-white disabled:opacity-50"
                         >
                           Use This Time
                         </button>
-                        <p className="text-xs text-[#3A3A38]/50">or tap slots directly below</p>
                       </div>
-
-                      <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-4 md:grid-cols-6">
-                        {availableHours.map((slot) => {
-                          const isSelectedSlot = selectedSlots.includes(slot);
-                          const isTaken = effectiveBookedSlots.includes(slot);
-                          return (
-                            <button
-                              key={slot}
-                              type="button"
-                              disabled={isTaken}
-                              onClick={() => toggleTimeSlot(slot)}
-                              className={`rounded-xl border py-3 text-sm font-medium transition-all duration-200 ${
-                                isTaken
-                                  ? "cursor-not-allowed border-red-100 bg-red-50/50 text-red-300 line-through"
-                                  : isSelectedSlot
-                                  ? "scale-105 border-[#4F6F52] bg-[#4F6F52] text-white shadow-md"
-                                  : "border-[#3A3A38]/20 bg-white/50 text-[#3A3A38]/70 hover:border-[#4F6F52]/50 hover:bg-white"
-                              }`}
-                            >
-                              {formatTime(slot)}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {rangeStart && (
+                        <p className="text-xs text-[#3A3A38]/50">
+                          This will book {formatTime(timeValueToSlot(rangeStart))} –{" "}
+                          {formatTime(timeValueToSlot(rangeStart) + durationHours * SLOTS_PER_HOUR)}.
+                        </p>
+                      )}
                     </>
                   )}
                   {!isDateBlocked && availableHours.length === 0 && (

@@ -1,5 +1,6 @@
 import { type SchemaTypeDefinition } from 'sanity'
 import { blog } from './blog'
+import { newsletter } from './newsletter'
 import { course } from './course'
 import internship from './internship'
 import  counselor  from './counselor'
@@ -10,5 +11,5 @@ import settings from './settings'
 import  about  from './about'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [blog, course, counselor, testimonial, initiative, about, tool, internship, settings],
+  types: [blog, newsletter, course, counselor, testimonial, initiative, about, tool, internship, settings],
 }
