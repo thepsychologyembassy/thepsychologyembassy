@@ -6,7 +6,7 @@ import gsap from "gsap";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Self-hosted worker (see scripts/copy-pdf-worker.js) — keeps the site's
+// Self-hosted worker (see scripts/copy-pdf-worker.js). Keeps the site's
 // Content-Security-Policy restricted to same-origin scripts.
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf-worker/pdf.worker.min.mjs";
 
@@ -70,7 +70,7 @@ export default function NewsletterReader({ pdfUrl, title }: NewsletterReaderProp
     <div className="flex flex-col items-center gap-6">
       <div
         ref={containerRef}
-        className="relative w-full max-w-3xl overflow-hidden rounded-3xl border border-[#3A3A38]/10 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.06)]"
+        className="relative w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         style={{ perspective: "1600px" }}
       >
         {isLoading && !loadError && (
@@ -84,7 +84,7 @@ export default function NewsletterReader({ pdfUrl, title }: NewsletterReaderProp
         {loadError && (
           <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 p-8 text-center">
             <p className="text-sm text-[#3A3A38]/60">
-              We couldn't load the preview for this newsletter.
+              We could not load the preview for this newsletter.
             </p>
             <a
               href={pdfUrl}
@@ -92,7 +92,7 @@ export default function NewsletterReader({ pdfUrl, title }: NewsletterReaderProp
               rel="noopener noreferrer"
               className="text-xs font-semibold uppercase tracking-widest text-[#4F6F52] hover:underline"
             >
-              Open the PDF directly →
+              Open the PDF directly
             </a>
           </div>
         )}
@@ -135,14 +135,14 @@ export default function NewsletterReader({ pdfUrl, title }: NewsletterReaderProp
             onClick={() => goToPage(pageNumber - 1)}
             disabled={pageNumber <= 1}
             aria-label="Previous page"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#3A3A38]/15 text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B]/5 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-[#CFE3E8] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
-          <span className="min-w-[90px] text-center text-xs font-semibold uppercase tracking-widest text-[#3A3A38]/60">
+          <span className="min-w-[90px] text-center text-xs font-semibold uppercase tracking-widest text-white/60">
             Page {pageNumber} of {numPages}
           </span>
 
@@ -151,7 +151,7 @@ export default function NewsletterReader({ pdfUrl, title }: NewsletterReaderProp
             onClick={() => goToPage(pageNumber + 1)}
             disabled={pageNumber >= numPages}
             aria-label="Next page"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#3A3A38]/15 text-[#2C4C5B] transition-colors hover:bg-[#2C4C5B]/5 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-[#CFE3E8] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
