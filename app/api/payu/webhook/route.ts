@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { sendAppointmentConfirmationEmails } from "../../../../lib/email";
-import { createCalendarEventsForAppointment } from "../../../../lib/googleCalendar";
 
 // Secure server-side Supabase client
 const supabaseAdmin = createClient(
@@ -50,22 +49,6 @@ export async function POST(request: Request) {
       // 3. SEND EMAILS IF IT IS AN APPOINTMENT AND WE'RE THE ONE PAYING IT
       if (targetTable === "appointments" && preUpdateAppointment && !alreadyPaid) {
         await sendAppointmentConfirmationEmails(preUpdateAppointment as any);
-
-        // Add a reminder to Google Calendar for whichever of the patient
-        // and counselor have connected theirs. Silently does nothing for
-        // whoever hasn't — never blocks or fails the booking.
-        const { patientEventId, counselorEventId } = await createCalendarEventsForAppointment(
-          preUpdateAppointment as any
-        );
-        if (patientEventId || counselorEventId) {
-          await supabaseAdmin
-            .from("appointments")
-            .update({
-              ...(patientEventId ? { patient_calendar_event_id: patientEventId } : {}),
-              ...(counselorEventId ? { counselor_calendar_event_id: counselorEventId } : {}),
-            })
-            .eq("id", udf1);
-        }
 
         // Record the coupon redemption now that payment is actually confirmed.
         if (preUpdateAppointment.coupon_code) {

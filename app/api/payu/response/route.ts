@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { sendAppointmentConfirmationEmails } from "../../../../lib/email";
-import { createCalendarEventsForAppointment } from "../../../../lib/googleCalendar";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,22 +46,6 @@ export async function POST(req: Request) {
         }).eq("id", udf1);
 
         await sendAppointmentConfirmationEmails(existingRecord as any);
-
-        // Add a reminder to Google Calendar for whichever of the patient
-        // and counselor have connected theirs. Silently does nothing for
-        // whoever hasn't — never blocks or fails the booking.
-        const { patientEventId, counselorEventId } = await createCalendarEventsForAppointment(
-          existingRecord as any
-        );
-        if (patientEventId || counselorEventId) {
-          await supabaseAdmin
-            .from("appointments")
-            .update({
-              ...(patientEventId ? { patient_calendar_event_id: patientEventId } : {}),
-              ...(counselorEventId ? { counselor_calendar_event_id: counselorEventId } : {}),
-            })
-            .eq("id", udf1);
-        }
 
         // Record the coupon redemption now that payment is actually confirmed
         // (never before this point - an abandoned/failed checkout should not

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import Navbar from "../../components/Navbar";
 import Link from "next/link";
-import GoogleCalendarConnect from "../../components/GoogleCalendarConnect";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -386,11 +385,6 @@ export default function DashboardPage() {
               Log Out
             </button>
           </div>
-        </div>
-
-        {/* Google Calendar reminder connection */}
-        <div className="mb-10">
-          <GoogleCalendarConnect redirectPath="/dashboard" />
         </div>
 
         {/* Appointments List */}

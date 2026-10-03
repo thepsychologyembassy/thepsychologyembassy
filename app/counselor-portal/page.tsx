@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { client } from "../../lib/sanity";
 import Navbar from "../../components/Navbar";
-import GoogleCalendarConnect from "../../components/GoogleCalendarConnect";
 
 export default function CounselorPortal() {
   const router = useRouter();
@@ -428,9 +427,6 @@ export default function CounselorPortal() {
           <p className="animate-pulse tracking-widest text-[#88B7B5]">Loading securely...</p>
         ) : (
           <div className="flex flex-col gap-10">
-
-            {/* Google Calendar reminder connection */}
-            <GoogleCalendarConnect redirectPath="/counselor-portal" />
 
             {/* MINI DASHBOARD: switch between the Calendar and Client Roster tabs */}
             <div className="inline-flex w-fit items-center gap-1 self-start rounded-2xl border border-[#3A3A38]/10 bg-white p-1.5 shadow-sm">
